@@ -19,8 +19,7 @@ from scipy.spatial.transform import Rotation as R
 import matplotlib.pyplot as plt
 
 # ROS 2 libraries
-import rclpy
-from rclpy.node import Node
+import rospy
 
 # TF2 and geometry
 import tf_transformations
@@ -53,7 +52,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 # Utilities
 from loguru import logger
 from angles import shortest_angular_distance
-from ros2_numpy import point_cloud2  # use ros2_numpy instead of ros_numpy
+from ros_numpy import point_cloud2.pointcloud2_to_xyz_array  # use ros2_numpy instead of ros_numpy
 
 
 

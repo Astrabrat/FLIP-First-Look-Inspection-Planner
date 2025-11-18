@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
+
 from header import * 
+from utils import PlannerUtils
+from inspection_quality import Snapshot
 
 logger.add("inspection_loguru.log")
 
@@ -10,61 +13,30 @@ class PlannerCore():
         
         logger.info('Inspection Planner Initialized')
 
-        self.initializeBasicParameters()
+        self.initializeMissionParameters()
         
-        self.initializeROSParameters()
+        self.initializeROSTopics()
 
-        hz = 5 #period = 1/2 = 0.5s = 500ms
-        timer_ = self.create_timer(1/hz, self.timer_callback) 
         
+    def initializeMissionParameters(self):
+    
+        self.desired_viewing_distance = rospy.get_param('~inspection_distance', 2.0)
+        self.photogrammetric_params = rospy.get_param('~photogrammetric_params', [0.6, 0.8])
+        self.fov = rospy.get_param('~fov', [69.4,45])
+        self.platform_modality = rospy.get_param('~platform_modality', 0)
+        self.min_pos_upd = rospy.get_param('~cmd_pos_upd', 0.2)
+        self.min_yaw_upd = rospy.get_param('~cmd_yaw_upd', 0.05)
+        self.sensor_rot = rospy.get_param('~sensor_rotation_S2B', [0.0, 0.0, 0.0])
+        self.prediction_horizon = rospy.get_param('~prediction_horizon', 10)
+        self.confidence_horizon = rospy.get_param('~confidence_horizon', 5)
+        self.min_points_confidence = rospy.get_param('~min_pts_conf', 10)
+        self.interp_alpha = rospy.get_param('~interpolation_alpha', 0.5)
+        self.world_frame = rospy.get_param('~world_frame', 'world')
+        self.baseLink_frame = rospy.get_param('~base_link_frame', 'base_link')
+        self.max_std_deviation = rospy.get_param('~max_std_deviation', 0.05)
+        self.run_mode = rospy.get_param('~run_mode', 0)
 
-    def timer_callback(self):
-        
-        self.main()
-        
-    def initializeBasicParameters(self):
-        
-
-        self.declare_parameter('inspection_distance', 2.0)
-        self.declare_parameter('photogrammetric_params', [0.0, 0.0])
-        self.declare_parameter('fov', 90.0)
-        self.declare_parameter('platform_modality', 0)
-        self.declare_parameter('cmd_pos_upd', 0.1)
-        self.declare_parameter('cmd_yaw_upd', 0.05)
-        self.declare_parameter('sensor_rotation_S2B', [0.0, 0.0, 0.0])
-        self.declare_parameter('prediction_horizon', 10)
-        self.declare_parameter('confidence_horizon', 5)
-        self.declare_parameter('min_pts_conf', 10)
-        self.declare_parameter('interpolation_alpha', 0.5)
-        self.declare_parameter('world_frame', 'world')
-        self.declare_parameter('base_link_frame', 'base_link')
-        self.declare_parameter('max_std_deviation', 0.05)
-        self.declare_parameter('run_mode', 0)
-
-
-        # Read parameters
-        self.desired_viewing_distance = self.get_parameter('inspection_distance').get_parameter_value().double_value
-        self.photogrammetric_params = self.get_parameter('photogrammetric_params').value
-        self.fov = self.get_parameter('fov').get_parameter_value().double_value
-        self.platform_modality = self.get_parameter('platform_modality').get_parameter_value().integer_value
-        self.min_pos_upd = self.get_parameter('cmd_pos_upd').get_parameter_value().double_value
-        self.min_yaw_upd = self.get_parameter('cmd_yaw_upd').get_parameter_value().double_value
-        self.sensor_rot = self.get_parameter('sensor_rotation_S2B').value
-        self.prediction_horizon = self.get_parameter('prediction_horizon').get_parameter_value().integer_value
-        self.confidence_horizon = self.get_parameter('confidence_horizon').get_parameter_value().integer_value
-        self.min_points_confidence = self.get_parameter('min_pts_conf').get_parameter_value().integer_value
-        self.interp_alpha = self.get_parameter('interpolation_alpha').get_parameter_value().double_value
-        self.world_frame = self.get_parameter('world_frame').get_parameter_value().string_value
-        self.baseLink_frame = self.get_parameter('base_link_frame').get_parameter_value().string_value
-        self.max_std_deviation = self.get_parameter('max_std_deviation').get_parameter_value().double_value
-        self.run_mode = self.get_parameter('run_mode').get_parameter_value().integer_value
-
-
-
-        self.ns = self.get_namespace()
-        
-        # nh_.setParam("/robot_namespace", namespace_);
-        rospy.set_param("/robot_namespace", self.ns)
+        self.ns = rospy.get_namespace()
         
         self.start_flag = False
         self.execute_plan = False
@@ -79,14 +51,11 @@ class PlannerCore():
         self.path = Path()
     
         self.hov = 0.5
+        self.Upvec = [0 0 1]
+
+        rospy.loginfo("Sucessfully loaded parameters")
         
-        
-        rospy.loginfo("Sucessfully loaded sensor model")
-        
-    def initializeROSParameters(self):
-        
-        qos = QoSProfile(depth=10)
-        
+    def initializeROSTopics(self):
         
         odom_topic_param = rospy.get_param("/odom_topic")
         pointcloud_topic_param = rospy.get_param("/pcl_topic")
@@ -100,7 +69,6 @@ class PlannerCore():
         
         croppedPoints_topic_param = rospy.get_param("/cropped_points")
         nearestNeighbour_topic_param = rospy.get_param("/nearest_neigbour")
-        confidenceDeviation_topic_param = rospy.get_param("/confidence_deviation")
         
         self.run_mode = rospy.get_param("/run_mode")
         
@@ -113,58 +81,38 @@ class PlannerCore():
     
         self.croppedPoints_topic = self.ns  + croppedPoints_topic_param
         self.nearestNeighbour_topic = self.ns  + nearestNeighbour_topic_param
-        self.confDev_topic = self.ns  + confidenceDeviation_topic_param
 
-        # rospy.Service(self.initializeInspectionMissionService,InitializeInspection,self.cb_initializeInspection)
-        # rospy.Service(self.executeInspectionMissionService,Trigger,self.cb_executeInspectionMission)
-        # rospy.Service(self.mission_plan_status_service_topic,MissionStatus,self.getMissionStatus)
+        rospy.Service(self.initializeInspectionMissionService,InitializeInspection,self.cb_initializeInspection)
+        rospy.Service(self.executeInspectionMissionService,Trigger,self.cb_executeInspectionMission)
 
         self.pub_vieweingDistance = rospy.Publisher(self.inspDist_topic,Float64,queue_size=1)
         self.pub_cropped_points = rospy.Publisher(self.croppedPoints_topic,PointCloud2,queue_size=1)
         self.pub_nn_point = rospy.Publisher(self.nearestNeighbour_topic,PointCloud2,queue_size=1)
         self.pub_predPath = rospy.Publisher(predictedPath_topic_param,Path,queue_size=1)
         self.pub_confDev = rospy.Publisher(self.confDev_topic,Float64,queue_size=1)
-        self.pub_refPose = rospy.Publisher("gecko_inspection/reference_pose",PoseStamped,queue_size=1)
-        self.pub_refGoal = rospy.Publisher("gecko_inspection/goal_pose",PoseStamped,queue_size=1)
-        self.visualize_initial_plan = rospy.Publisher('gecko_inspection/global_plans',MarkerArray,queue_size=1)
-        self.PubReferencePath = rospy.Publisher("reference_path",Path,queue_size=1)
-        self.PubTSPTourPath = rospy.Publisher("gecko_inspection/tsp_tour_path",Path,queue_size=1)
+        self.pub_refPose = rospy.Publisher("inspection_planner/reference_pose",PoseStamped,queue_size=1)
+        
 
         rospy.Subscriber(self.odom_topic,Odometry,self.cb_odom,queue_size=1)
+        rospy.wait_for_odom(self.odom_topic,Odometry)
+        
         rospy.Subscriber("filtered_pointcloud",PointCloud2,self.cb_pointcloud,queue_size=1)
-
-        self.plan_query_srv = rospy.ServiceProxy('voxblox_rrt_planner_node/query_path',PathQuery)
-        self.nav_query_srv = rospy.ServiceProxy('mapper_node/navigate_to_goal',PathQuery)
-        self.requestCollisionCheckonViewPlan = rospy.ServiceProxy("mapper_node/query_plan",PlanQuery)
+        rospy.wait_for_odom("filtered_pointcloud",PointCloud2)
 
         # Publish inspection quants
-        self.vis_plan_cost = rospy.Publisher("gecko_inspection/mission/plan_cost",MarkerArray,queue_size=1)
-        self.vis_proj_pose = rospy.Publisher("gecko_inspection/projected_pose",PoseStamped,queue_size=1)
-        self.vis_dtw_path = rospy.Publisher("gecko_inspection/mission/dtw_path",MarkerArray,queue_size=1)
-        self.vis_aligned_path_ = rospy.Publisher("gecko_inspection/mission/umeyama",Path,queue_size=1)
-
-        self.nav_action = actionlib.SimpleActionClient("mapper_node/navigate_to_goal", NavigationAction)
-
-        self.interPolatePath_srv = rospy.ServiceProxy("gecko_command/interpolate_path",InterpolatePath)
-
-        self.pub_insp_performance = rospy.Publisher("gecko_inspection/inspection_performance",InspectionPerformance,queue_size=1)
-        self.path_pub = rospy.Publisher("gecko_inspection/tracked_path",Path,queue_size=1)
+        self.pub_insp_performance = rospy.Publisher("inspection_planner/inspection_performance",InspectionPerformance,queue_size=1)
+        self.path_pub = rospy.Publisher("inspection_planner/tracked_path",Path,queue_size=1)
 
         ## DEBUGGING 
         if self.run_mode == 0:
             rospy.Subscriber("/insp_start_flag",String,self.cb_start)
-            self.path_pub = rospy.Publisher("gecko_inspection/tracked_path",Path,queue_size=1)
+            self.path_pub = rospy.Publisher("inspection_planner/tracked_path",Path,queue_size=1)
             rospy.Subscriber("filtered_pointcloud_dbg",PointCloud2,self.cb_pointcloud,queue_size=1)
-            self.pub_insp_performance = rospy.Publisher("gecko_inspection/inspection_performance_dbg",InspectionPerformance,queue_size=1)
-            self.nav_query_srv = rospy.ServiceProxy('mapper_node/navigate_to_goal_dbg',PathQuery)
-            self.nav_action = actionlib.SimpleActionClient("mapper_node/navigate_to_goal_dbg", NavigationAction)
-            self.requestCollisionCheckonViewPlan = rospy.ServiceProxy("mapper_node/query_plan_dbg",PlanQuery)
-            self.vis_dtw_path = rospy.Publisher("gecko_inspection/mission/dtw_path_dbg",MarkerArray,queue_size=1)
-            self.vis_aligned_path_ = rospy.Publisher("gecko_inspection/mission/umeyama_dbg",Path,queue_size=1)
+            self.pub_insp_performance = rospy.Publisher("inspection_planner/inspection_performance_dbg",InspectionPerformance,queue_size=1)
             self.res_start = True
-
-    def now(self) -> TimeMsg:
-        return self.get_clock().now().to_msg()
+            
+            
+        rospy.loginfo("Sucessfully loaded topics")
 
     def publish_path(self):
         self.path.header.stamp = self.now()
@@ -189,7 +137,7 @@ class PlannerCore():
     
     def cb_executeInspectionMission(self,srv):
 
-        self.current_mission_status = f'Executing Plan'
+        self.current_mission_status = f'Executing Mission'
 
         self.execute_plan = True
 
@@ -202,9 +150,6 @@ class PlannerCore():
         py = data.pose.pose.position.y
         pz = data.pose.pose.position.z
         
-        # if self.platform_modality == 0:
-        #     pz =
-        
         qx = data.pose.pose.orientation.x
         qy = data.pose.pose.orientation.y
         qz = data.pose.pose.orientation.z
@@ -212,7 +157,7 @@ class PlannerCore():
         
         self.odom_pose = np.array([px,py,pz,qx,qy,qz,qw])
 
-        [r,p,yaw] = GPU.quat2eul(qx,qy,qz,qw)
+        [r,p,yaw] = PlannerUtils.quat2eul(qx,qy,qz,qw)
         
         self.curr_yaw = yaw
         
@@ -225,9 +170,9 @@ class PlannerCore():
         self.sensor_frame = data.header.frame_id
 
     @logger.catch
-    def generateViewPose(self, pos, action, points,pac_pos,pose,counter):
+    def generateViewPose(self, pos, action, points,pose):
 
-        cpoints,croppedPointsMsg = GPU.crop_points_within_fov(points,pose)
+        cpoints,croppedPointsMsg = PlannerUtils.crop_points_within_fov(points,pose)
         
         self.pub_cropped_points.publish(croppedPointsMsg)
         
@@ -252,31 +197,10 @@ class PlannerCore():
         dZ = np.cross(dX, dY, axis=0)
 
         # Compute distance difference
-        diff_view_dist = dist - self.viewing_dist
+        diff_view_dist = dist - self.desired_viewing_distance
 
         # Initialize command position
         command_pos = pos.copy()
-        
-        # projected_pac_pos = self.ProjectGlobalPlan(pac_pos)
-        
-        pv =  pac_pos - pos
-    
-        norm_pv = np.linalg.norm(pv)
-        
-        nm_pv = pv / norm_pv
-        
-        cos_angle = np.dot(nm_pv,dY)/(np.linalg.norm(dY)*np.linalg.norm(nm_pv))
-        angle_between = np.arccos(cos_angle)
-    
-        
-        # logger.debug(f"SWITCH angle: {angle_between}")
-        
-        if angle_between >= 1.57:
-            # print("switching")
-            self.switch = True
-        else:
-            # print("not switching")
-            self.switch = False
             
         if action == "inspect":
             
@@ -285,28 +209,13 @@ class PlannerCore():
             
             self.hov = hov
             
+            # vov = (2 * self.mean_norm_LA * np.tan(np.deg2rad(self.fov[1]) / 2) -
+            #     self.photogrammetric_params[1] * 2 * self.mean_norm_LA * np.tan(np.deg2rad(self.fov[1]) / 2))
             
-            vov = (2 * self.mean_norm_LA * np.tan(np.deg2rad(self.fov[1]) / 2) -
-                self.photogrammetric_params[1] * 2 * self.mean_norm_LA * np.tan(np.deg2rad(self.fov[1]) / 2))
-            
-
-            if pac_pos[2] - pos[2] < -0.35:
-                vov = -vov
-                hov = 0
-            elif pac_pos[2] - pos[2] > 0.35:
-                vov = vov
-                hov = 0
+            if self.switch:
+                tcommand_pos = command_pos + dX * diff_view_dist - dY * hov + dZ * vov
             else:
-                vov = 0
-                
-            if counter == 0 and diff_view_dist > 1.0:
-                 tcommand_pos = command_pos + dX * diff_view_dist
-            else:       
-        
-                if self.switch:
-                    tcommand_pos = command_pos + dX * diff_view_dist - dY * hov + nm_pv * self.adaptive_factor + dZ * vov
-                else:
-                    tcommand_pos = command_pos + dX * diff_view_dist + dY * hov + nm_pv * self.adaptive_factor + dZ * vov
+                tcommand_pos = command_pos + dX * diff_view_dist + dY * hov + dZ * vov
 
             self.norm_LA.append(norm_lookat)
             self.mean_norm_LA = np.mean(self.norm_LA)
@@ -321,7 +230,7 @@ class PlannerCore():
             tcommand_pos = command_pos + dX * diff_view_dist + dZ * vov
 
         # Compute valid yaw angle
-        valid_yaw = np.arctan2(dX[1], dX[0])
+        valid_yaw = np.arctan2(dX[1], dX[0]) + self.sensor_rot[2]
         
         return tcommand_pos, valid_yaw
     
@@ -379,9 +288,9 @@ class PlannerCore():
             # Generate local view pose
             next_ref = list(self.bufferQ)[k][0:3]
             
-            command_pos, command_yaw = self.generateViewPose(pred_pos, "inspect", lidar_points,next_ref,predPose,k)
+            command_pos, command_yaw = self.generateViewPose(pred_pos, "inspect", lidar_points,predPose)
 
-            [cqx, cqy, cqz, cqw] = GPU.eul2quat(0, 0, command_yaw)
+            [cqx, cqy, cqz, cqw] = PlannerUtils.eul2quat(0, 0, command_yaw)
 
             # Populate PoseStamped message
             pred_pose = PoseStamped()
@@ -428,10 +337,6 @@ class PlannerCore():
     def evaluate_validPoints(self,points, pred_pos):
         
         lidar_points = self.curr_pts
-
-        # cropped_points = self.crop_points_within_fov(lidar_points)
-
-        # print(np.shape(cropped_points))
         
         tree = KDTree(lidar_points)
         dist, interestPointIdx = tree.query(pred_pos, k=1,workers=-1)
@@ -478,19 +383,16 @@ class PlannerCore():
         
         flag = 0
         
-        # print(pose,self.odom_pose[0:3],yaw,self.curr_yaw)
-        # print(np.linalg.norm(pose-self.odom_pose[0:3]))
-        
         if self.platform_modality == 0:
             pose[2] = self.odom_pose[2]
             
         if yaw is not None:
             
-            if np.linalg.norm(pose-self.odom_pose[0:3]) <= 0.35 and abs(yaw-self.curr_yaw) <= self.min_yaw_upd:
+            if np.linalg.norm(pose-self.odom_pose[0:3]) <= self.min_pos_upd and abs(yaw-self.curr_yaw) <= self.min_yaw_upd:
 
                 flag = 1
         else:
-            if np.linalg.norm(pose-self.odom_pose[0:3]) <= 0.35:
+            if np.linalg.norm(pose-self.odom_pose[0:3]) <= self.min_pos_upd:
                 
                 flag = 1
                 
@@ -518,13 +420,13 @@ class PlannerCore():
         
         next_ref = list(self.bufferQ)[0][0:3]
 
-        _,command_yaw = self.generateViewPose(ego,"maintain",curr_points,next_ref,egoPose,0)
+        _,command_yaw = self.generateViewPose(ego,"maintain",curr_points,egoPose)
 
         command_yaw = self.interpolate_yaw(self.curr_yaw, command_yaw, self.interp_alpha)
 
         command_yaw = command_yaw + self.sensor_rot[2]
 
-        [cqx, cqy, cqz, cqw] = GPU.eul2quat(0, 0, command_yaw)
+        [cqx, cqy, cqz, cqw] = PlannerUtils.eul2quat(0, 0, command_yaw)
 
         path.poses[0].pose.orientation.x = cqx
         path.poses[0].pose.orientation.y = cqy
@@ -545,7 +447,6 @@ class PlannerCore():
 
         self.norm_LA = []
         self.path = Path()
-        
          
     def PublishInspectionPerformance(self):
         
@@ -555,52 +456,54 @@ class PlannerCore():
         insp_perf.view_planning_time.data = float(self.vp_time)
         insp_perf.maintained_distance.data = float(self.nearest_surface())
         insp_perf.desired_distance.data = float(self.desired_viewing_distance)
+        insp_perf.view_quality = float(self.viewpose_quality)
 
         self.pub_insp_performance.publish(insp_perf)
         
         
-    # def main(self):
-        
     def main(self):
-        if not self.start_flag:
-            return
-
-
-        t0 = time.perf_counter()
-        try:
-            tpred_path, tpred_path_array, predRefPose, commandPos, tcommand_yaw = self.view_pred()
-            self.vp_time = time.perf_counter() - t0
-            logger.info(f"[View planning] Took: {self.vp_time:.3f} s")
-        except Exception as e:
-            self.get_logger().error(f"view_pred failed: {e}")
-            return
         
-        self.PublishInspectionPerformance()
-        self.path.poses.append(GPU.PoseArraytoPoseMsg(self.odom_pose.copy()))
-        self.publish_path()
-        self.pub_predPath.publish(tpred_path)
-        self.pub_refPose.publish(predRefPose)
+        while not rospy.is_shutdown():
+            
+            if self.start_flag:
+                
+                try:
+                    t0 = time.perf_counter()
+                    tpred_path, tpred_path_array, predRefPose, commandPos, tcommand_yaw = self.view_pred()
+                    self.vp_time = time.perf_counter() - t0
+                    logger.info(f"[View planning] Took: {self.vp_time:.3f} s")
+                except Exception as e:
+                    self.get_logger().error(f"view_pred failed: {e}")
+                    
+                
+                self.PublishInspectionPerformance()
+                self.path.poses.append(PlannerUtils.PoseArraytoPoseMsg(self.odom_pose.copy()))
+                self.publish_path()
+                self.pub_predPath.publish(tpred_path)
+                self.pub_refPose.publish(predRefPose)
 
+                while not self.threshold_check(np.array(commandPos), tcommand_yaw):
+                    self.PublishInspectionPerformance()
+                    tpred_path, predRefPose, tcommand_yaw = self.update_yaw(tpred_path)
+                    self.pub_predPath.publish(tpred_path)
+                    self.pub_refPose.publish(predRefPose)
+                    self.rate.sleep()
 
-        while not self.threshold_check(np.array(commandPos), tcommand_yaw):
-            self.PublishInspectionPerformance()
-            tpred_path, predRefPose, tcommand_yaw = self.update_yaw(tpred_path)
-            self.pub_predPath.publish(tpred_path)
-            self.pub_refPose.publish(predRefPose)
-
-
-        self.PublishInspectionPerformance()
+                self.PublishInspectionPerformance()
+                
+            self.rate.sleep()
 
         
-# if __name__ == '__main__':
+if __name__ == '__main__':
     
-#     rospy.init_node('inspection_planner_core') #inspection node
+    rospy.init_node('inspection_planner') #inspection node
     
-#     try:
-#         PlannerCore()
-#         rospy.spin()
-#     except rospy.ROSInterruptException:
-#         pass
+    try:
+        PlannerCore()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass
+
 
         
         
