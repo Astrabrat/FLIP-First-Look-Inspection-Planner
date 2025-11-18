@@ -868,7 +868,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         
         return TSPPath
 
-    def distance_matrix(self,data, metric='euclidean'):
+    def distance_matrix(self,data, metric='euclidean',weighted_height=False):
         """
         Calculates the distance matrix for a given data matrix.
 
@@ -885,7 +885,11 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         for i in range(n):
             for j in range(i, n):
                 if metric == 'euclidean':
-                    distance = np.linalg.norm(data[i] - data[j])
+                    if not weighted_height:
+                        
+                        distance = np.linalg.norm(data[i] - data[j]) 
+                    else:
+                        distance = np.linalg.norm(data[i] - data[j]) + 10*(data[i,2] - data[j,2])
                 elif metric == 'manhattan':
                     distance = np.sum(np.abs(data[i] - data[j]))
                 else:

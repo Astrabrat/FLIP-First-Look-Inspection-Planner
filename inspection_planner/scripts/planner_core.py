@@ -57,31 +57,24 @@ class PlannerCore():
         
     def initializeROSTopics(self):
         
-        odom_topic_param = rospy.get_param("/odom_topic")
-        pointcloud_topic_param = rospy.get_param("/pcl_topic")
+        self.odom_topic = rospy.get_param("/odom_topic")
+        self.pcl_topic = rospy.get_param("/pcl_topic")
         self.mission_plan_status_service_topic = rospy.get_param('/mission_plan_status_service_topic')
         self.initializeInspectionMissionService = rospy.get_param('/initialize_inspection_service')
         self.executeInspectionMissionService = rospy.get_param('/execute_inspection_service')
         
-        inspectionDistance_metric_topic_param = rospy.get_param("/maintained_distance")
-        referencePose_topic_param = rospy.get_param("/reference_pose")
+        self.inspDist_topic = rospy.get_param("/maintained_distance")
+        self.reference_pose_topic = rospy.get_param("/reference_pose")
         predictedPath_topic_param = rospy.get_param("/predicted_path")
         
-        croppedPoints_topic_param = rospy.get_param("/cropped_points")
-        nearestNeighbour_topic_param = rospy.get_param("/nearest_neigbour")
+        self.croppedPoints_topic = rospy.get_param("/cropped_points")
+        self.nearestNeighbour_topic = rospy.get_param("/nearest_neigbour")
+        
+        self.inspection_performance_topic = rospy.get_param("/inspection_performance")
+        self.tracked_path_topic = rospy.get_param("/tracked_path")
         
         self.run_mode = rospy.get_param("/run_mode")
-        
-        self.odom_topic = self.ns  + odom_topic_param
-        self.pointcloud_topic = self.ns  + pointcloud_topic_param
-        
-        self.inspDist_topic = self.ns  + inspectionDistance_metric_topic_param
-        self.refPose_topic = self.ns  + referencePose_topic_param
-        self.predPath_topic = self.ns  + predictedPath_topic_param
     
-        self.croppedPoints_topic = self.ns  + croppedPoints_topic_param
-        self.nearestNeighbour_topic = self.ns  + nearestNeighbour_topic_param
-
         rospy.Service(self.initializeInspectionMissionService,InitializeInspection,self.cb_initializeInspection)
         rospy.Service(self.executeInspectionMissionService,Trigger,self.cb_executeInspectionMission)
 
@@ -89,15 +82,14 @@ class PlannerCore():
         self.pub_cropped_points = rospy.Publisher(self.croppedPoints_topic,PointCloud2,queue_size=1)
         self.pub_nn_point = rospy.Publisher(self.nearestNeighbour_topic,PointCloud2,queue_size=1)
         self.pub_predPath = rospy.Publisher(predictedPath_topic_param,Path,queue_size=1)
-        self.pub_confDev = rospy.Publisher(self.confDev_topic,Float64,queue_size=1)
-        self.pub_refPose = rospy.Publisher("inspection_planner/reference_pose",PoseStamped,queue_size=1)
+        self.pub_refPose = rospy.Publisher(self.reference_pose_topic,PoseStamped,queue_size=1)
         
 
         rospy.Subscriber(self.odom_topic,Odometry,self.cb_odom,queue_size=1)
-        rospy.wait_for_odom(self.odom_topic,Odometry)
+        rospy.wait_for_message(self.odom_topic,Odometry)
         
-        rospy.Subscriber("filtered_pointcloud",PointCloud2,self.cb_pointcloud,queue_size=1)
-        rospy.wait_for_odom("filtered_pointcloud",PointCloud2)
+        rospy.Subscriber(self.pcl_topic,PointCloud2,self.cb_pointcloud,queue_size=1)
+        rospy.wait_for_message(self.pcl_topic,PointCloud2)
 
         # Publish inspection quants
         self.pub_insp_performance = rospy.Publisher("inspection_planner/inspection_performance",InspectionPerformance,queue_size=1)
@@ -475,8 +467,8 @@ class PlannerCore():
                 except Exception as e:
                     self.get_logger().error(f"view_pred failed: {e}")
                     
-                
                 self.PublishInspectionPerformance()
+                
                 self.path.poses.append(PlannerUtils.PoseArraytoPoseMsg(self.odom_pose.copy()))
                 self.publish_path()
                 self.pub_predPath.publish(tpred_path)
