@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 import rospy
 
 # TF2 and geometry
-import tf_transformations
+# import tf_transformations
 import tf2_ros
 import tf2_geometry_msgs
 
@@ -52,12 +52,14 @@ from visualization_msgs.msg import Marker, MarkerArray
 # Utilities
 from loguru import logger
 from angles import shortest_angular_distance
-from ros_numpy import point_cloud2.pointcloud2_to_xyz_array  # use ros2_numpy instead of ros_numpy
+from ros_numpy import point_cloud2
 
 
 
+import sensor_msgs.point_cloud2 as pcl2_msg
 
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
-from std_srvs.srv import Trigger
-from builtin_interfaces.msg import Time
+from std_srvs.srv import *
+from inspection_msgs.msg import *
+from ttictoc import tic, toc
