@@ -2,6 +2,7 @@
 
 from header import * 
 from utils import PlannerUtils
+import os
 
 logger.add("inspection_core_loguru.log")
 
@@ -62,6 +63,8 @@ class PlannerCore():
         # self.pub_cropped_points.publish(croppedPointsMsg)
         
         if len(cpoints) < 2:
+            # cpoints,croppedPointsMsg = PlannerUtils.crop_points_within_fov(points,pred_pose,increment_fov=True)
+            
             # fallback to the orignal points list otherwise the rest of the code would fail
             tree = KDTree(points)
             tpoints = points
@@ -123,9 +126,9 @@ class PlannerCore():
                 self.photogrammetric_params[1] * 2 * self.mean_norm_LA * np.tan(np.deg2rad(self.fov[1]) / 2))
             
             if self.switch:
-                tcommand_pos = command_pos + dX * diff_view_dist - dY * hov + dZ * vov
+                tcommand_pos = command_pos + dX * diff_view_dist - dY * hov
             else:
-                tcommand_pos = command_pos + dX * diff_view_dist + dY * hov + dZ * vov
+                tcommand_pos = command_pos + dX * diff_view_dist + dY * hov
 
             self.norm_LA.append(norm_lookat)
             self.mean_norm_LA = np.mean(self.norm_LA)
@@ -140,23 +143,41 @@ class PlannerCore():
             tcommand_pos = command_pos + dX * diff_view_dist + dZ * vov
 
         # Compute valid yaw angle
-        valid_yaw = np.arctan2(dX[1], dX[0])
+        valid_yaw = np.arctan2(dX[1], dX[0]) 
         
         return tcommand_pos, valid_yaw
+
+    def getRotatedOdomYaw(self,odom_pose,yaw_offset):
+
+        predPose = odom_pose.copy()
+        
+        _,_,qyaw = PlannerUtils.quat2eul(odom_pose[3], odom_pose[4], odom_pose[5], odom_pose[6])
+        rqyaw = qyaw + yaw_offset
+        [rqx, rqy, rqz, rqw] = PlannerUtils.eul2quat(0, 0, rqyaw)
+        predPose[3] = rqx
+        predPose[4] = rqy
+        predPose[5] = rqz
+        predPose[6] = rqw
+        
+        return predPose
     
     @logger.catch
-    def viewPolicy(self,pcl_pub_handle,lidar_points,odom_pose):
+    def standardViewPolicy(self,pcl_pub_handle,lidar_points,odom_pose):
         
         pred_path = Path()
 
         predPose = odom_pose.copy()
-        pred_pos = odom_pose[0:3]
+        
+        if self.sensor_rot[2] != 0.0:
+            predPose = self.getRotatedOdomYaw(odom_pose.copy(),self.sensor_rot[2])
+        
+        pred_pos = predPose[0:3]
         predPathArray = []
         
         for k in range(self.prediction_horizon):
             
             command_pos, command_yaw = self.generateViewPose(pred_pos, "inspect", lidar_points,predPose,pcl_pub_handle)
-            command_yaw = command_yaw - self.sensor_rot[2]
+            # command_yaw = command_yaw - self.sensor_rot[2]
             [cqx, cqy, cqz, cqw] = PlannerUtils.eul2quat(0, 0, command_yaw)
 
             # Populate PoseStamped message
@@ -166,7 +187,7 @@ class PlannerCore():
             
             pred_pose.pose.position.x = command_pos[0]
             pred_pose.pose.position.y = command_pos[1]
-            pred_pose.pose.position.z = odom_pose[2]
+            pred_pose.pose.position.z = self.insp_height
             
             pred_pose.pose.orientation.x = cqx
             pred_pose.pose.orientation.y = cqy
@@ -176,22 +197,24 @@ class PlannerCore():
             pred_path.header.frame_id = self.world_frame
             pred_path.header.stamp = rospy.Time.now()
             pred_path.poses.append(pred_pose)
-    
+
             logger.debug(f"{command_pos}, {pred_pos}")
 
             # Save initial reference pose
             if k == 0:
-                command_pos[2] = odom_pose[2]
+                command_pos[2] = self.insp_height
                 cpos = command_pos
                 cyaw = command_yaw
                 refPose = pred_pose
                 
-            predPose = np.array([command_pos[0],command_pos[1],odom_pose[2],cqx,cqy,cqz,cqw])
+            predPose = np.array([command_pos[0],command_pos[1],self.insp_height,cqx,cqy,cqz,cqw])
             
             predPathArray.append(predPose)
 
             # Update predicted position for the next iteration
             pred_pos = command_pos
+            
+            # input()
 
         # Finalize predicted path
         pred_path.header.frame_id = self.world_frame

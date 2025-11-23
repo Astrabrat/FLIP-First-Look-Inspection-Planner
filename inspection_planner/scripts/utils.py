@@ -352,7 +352,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         
         return bufferQ
 
-    def crop_points_within_fov(points,odom_pose):
+    def crop_points_within_fov(points,odom_pose,increment_fov=False):
         
         # odom_pose = [x, y, z, qx, qy, qz, qw]
         t = np.asarray(odom_pose[:3])
@@ -378,7 +378,10 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         vhat[valid] = p_yaw[valid] / norms[valid, None]
 
         # dot with x-axis == vhat[:,0]
-        cos_thresh = np.cos(np.deg2rad(15))
+        if increment_fov:
+            cos_thresh = np.cos(np.deg2rad(30))
+        else:
+            cos_thresh = np.cos(np.deg2rad(15))
         # clip for safety if you later use arccos (here we don't need arccos)
         dots = np.clip(vhat[:, 0], -1.0, 1.0)
 
