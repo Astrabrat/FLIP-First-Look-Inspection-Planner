@@ -30,7 +30,7 @@ class PlannerNode():
         self.world_frame = rospy.get_param('/world_frame', 'world')
         self.run_mode = rospy.get_param('/run_mode', 1)
         self.sensor_rot = rospy.get_param('/sensor_rotation', [0.0, 0.0, 0.0])
-        self.rate_controller = rospy.get_param('/rate_controller', 10)
+        self.rate_controller = rospy.get_param('/rate_controller', 20)
         
         self.rate = rospy.Rate(self.rate_controller)
 
@@ -122,11 +122,12 @@ class PlannerNode():
 
         [r,p,yaw] = PlannerUtils.quat2eul(qx,qy,qz,qw)
 
-        self.curr_yaw = yaw + self.sensor_rot[2]
+        # self.curr_yaw = yaw + self.sensor_rot[2]
+        self.curr_yaw = yaw 
         
-        rqx,rqy,rqz,rqw = PlannerUtils.eul2quat(0,0,self.curr_yaw)
+        # rqx,rqy,rqz,rqw = PlannerUtils.eul2quat(0,0,self.curr_yaw)
         
-        self.odom_pose = np.array([px,py,pz,rqx,rqy,rqz,rqw])
+        self.odom_pose = np.array([px,py,pz,qx,qy,qz,qw])
         
 
     def viewPredPolicy(self):
@@ -145,7 +146,7 @@ class PlannerNode():
         
         currPose = self.odom_pose.copy()
 
-        pred_path, predPathArray, refPose, cpos, cyaw = self.planner.viewPolicy(self.pub_cropped_points,lidar_points=lidar_points, odom_pose=currPose)
+        pred_path, predPathArray, refPose, cpos, cyaw = self.planner.standardViewPolicy(self.pub_cropped_points,lidar_points=lidar_points, odom_pose=currPose)
         
         self.pub_predPath.publish(pred_path)
         
@@ -159,55 +160,66 @@ class PlannerNode():
             
         if yaw is not None:
             
-            try:
-                resp =  self.cbfPolicy()
-            except rospy.ServiceException as e:
-                logger.warning(f"CBF Service call failed: {e}")
-                resp = None
+            # try:
+            #     resp =  self.cbfPolicy()
+            # except rospy.ServiceException as e:
+            #     logger.warning(f"CBF Service call failed: {e}")
+            #     resp = None
                 
-            ## Fallback incase cbf service fails
-            if resp is not None and resp.success:
+            # ## Fallback incase cbf service fails
+            # if resp is not None and resp.success:
                 
-                logger.debug("[Case 1] CBF Policy Triggered")
+            logger.debug("[Case 1] CBF Policy Triggered")
+            
+            if self.sensor_rot[2] != 0.0:
+                curr_yaw = self.curr_yaw + self.sensor_rot[2]
+                curr_yaw = self.planner.normalizeAngle(curr_yaw)
+                
+            if np.linalg.norm(pose-self.odom_pose[0:3]) <= self.min_pos_upd and abs(yaw-curr_yaw) <= self.min_yaw_upd: ## Check the condition whre the CBF return True but the Yaw is not satisfied (in nominal as well as obstacle case)
 
-                if np.linalg.norm(pose-self.odom_pose[0:3]) <= self.min_pos_upd and abs(yaw-self.curr_yaw) <= self.min_yaw_upd: ## Check the condition whre the CBF return True but the Yaw is not satisfied (in nominal as well as obstacle case)
-
-                    return True
-                else:
-                    logger.warning(f"CBF responded {resp} but thresholds not met")
+                return True
+            # else:
+            #     logger.warning(f"CBF responded {resp} but thresholds not met")
             
         else:
-            try:
-                resp =  self.cbfPolicy()
-            except rospy.ServiceException as e:
-                logger.warning(f"CBF Service call failed: {e}")
-                resp = None
+            # try:
+            #     resp =  self.cbfPolicy()
+            # except rospy.ServiceException as e:
+            #     logger.warning(f"CBF Service call failed: {e}")
+            #     resp = None
                 
             ## Fallback incase cbf service fails
-            if resp is not None and resp.success:
+            # if resp is not None and resp.success:
                 
-                logger.debug("[Case 2] CBF Policy Triggered")
-    
-                if np.linalg.norm(pose-self.odom_pose[0:3]) <= self.min_pos_upd:
-                    
-                   return True
-                else:
-                    logger.warning(f"CBF responded {resp} but thresholds not met")
-                    
+            logger.debug("[Case 2] CBF Policy Triggered")
+
+            if np.linalg.norm(pose-self.odom_pose[0:3]) <= self.min_pos_upd:
+                
+                return True
+            # else:
+            #     logger.warning(f"CBF responded {resp} but thresholds not met")
+                                            
         return False
                 
         
     def updateYaw(self,path,pcl_pub_handle):
         
         currPose = self.odom_pose.copy()
-        cpos = self.odom_pose[0:3]
+        currPos = currPose[0:3]
+
+        if self.sensor_rot[2] != 0.0:
+            
+            currPose = self.planner.getRotatedOdomYaw(self.odom_pose.copy(),self.sensor_rot[2])
+            _,_,currYaw = PlannerUtils.quat2eul(currPose[3],currPose[4],currPose[5],currPose[6])
+            currPos = currPose[0:3]
+        else:
+            currYaw = self.curr_yaw.copy()
 
         curr_points = point_cloud2.pointcloud2_to_xyz_array(self.raw_pts, remove_nans=True)
 
-        _,command_yaw = self.planner.generateViewPose(cpos,"maintain",curr_points,currPose,pcl_pub_handle)
+        _,command_yaw = self.planner.generateViewPose(currPos,"maintain",curr_points,currPose,pcl_pub_handle)
 
-        command_yaw = command_yaw - self.sensor_rot[2]
-        command_yaw = self.planner.interpolateYaw(self.curr_yaw, command_yaw)
+        command_yaw = self.planner.interpolateYaw(currYaw, command_yaw)
 
         [cqx, cqy, cqz, cqw] = PlannerUtils.eul2quat(0, 0, command_yaw)
 
@@ -246,6 +258,27 @@ class PlannerNode():
         self.path.header.frame_id = self.world_frame
         self.path_pub.publish(self.path)
 
+    def modifyReferenceYaw(self, refPose, yaw_offset):
+        [_,_,current_yaw] = PlannerUtils.quat2eul(refPose.pose.orientation.x,
+                                                  refPose.pose.orientation.y,
+                                                  refPose.pose.orientation.z,
+                                                  refPose.pose.orientation.w)
+        
+        modified_yaw = current_yaw - yaw_offset
+        
+        modified_yaw = self.planner.normalizeAngle(modified_yaw)
+        
+        logger.debug(f"Modifying reference yaw from {current_yaw:.3f} to {modified_yaw:.3f} with an offet of {yaw_offset} radians")
+        
+        [mqx, mqy, mqz, mqw] = PlannerUtils.eul2quat(0, 0, modified_yaw)
+        
+        refPose.pose.orientation.x = mqx
+        refPose.pose.orientation.y = mqy
+        refPose.pose.orientation.z = mqz
+        refPose.pose.orientation.w = mqw
+        
+        self.pub_refPose.publish(refPose)
+        
     def main(self):
         
         while not rospy.is_shutdown():
@@ -268,13 +301,22 @@ class PlannerNode():
                 self.path.poses.append(PlannerUtils.PoseArraytoPoseMsg(self.odom_pose.copy()))
                 self.publish_path()
                 self.pub_predPath.publish(tpred_path)
-                self.pub_refPose.publish(predRefPose)
+                if self.sensor_rot[2] != 0: # rotated case, go for modified publishing
+                    self.modifyReferenceYaw(predRefPose, self.sensor_rot[2])
+                else: # nominal case, go for direct publishing
+                    self.pub_refPose.publish(predRefPose)
 
                 while not self.thresholdCheck(np.array(commandPos), tcommand_yaw):
                     self.publishInspectionPerformance()
                     tpred_path, predRefPose, tcommand_yaw = self.updateYaw(tpred_path,self.pub_cropped_points)
                     self.pub_predPath.publish(tpred_path)
-                    self.pub_refPose.publish(predRefPose)
+                    
+                    if self.sensor_rot[2] != 0: # rotated case, go for modified publishing
+                        self.modifyReferenceYaw(predRefPose, self.sensor_rot[2])
+                    else: # nominal case, go for direct publishing
+                        self.pub_refPose.publish(predRefPose)
+                        
+                    # self.pub_refPose.publish(predRefPose)
                     self.rate.sleep()
                 
             self.rate.sleep()
