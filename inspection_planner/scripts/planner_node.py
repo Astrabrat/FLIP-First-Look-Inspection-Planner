@@ -30,7 +30,7 @@ class PlannerNode():
         self.world_frame = rospy.get_param('/world_frame', 'world')
         self.run_mode = rospy.get_param('/run_mode', 1)
         self.sensor_rot = rospy.get_param('/sensor_rotation', [0.0, 0.0, 0.0])
-        self.rate_controller = rospy.get_param('/rate_controller', 20)
+        self.rate_controller = rospy.get_param('/rate_controller', 10)
         
         self.rate = rospy.Rate(self.rate_controller)
 

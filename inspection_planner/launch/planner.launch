@@ -1,11 +1,11 @@
 <launch>
 
-    <!-- <arg name="team" default='kReal'/>
-    <arg name="robot" default='spot'/> -->
+    <arg name="team" default='kReal'/>
+    <arg name="robot" default='spot'/>
 
 
-   <arg name="team" default='kSim'/>
-    <arg name="robot" default='pelican'/>
+   <!-- <arg name="team" default='kSim'/>
+    <arg name="robot" default='pelican'/> -->
 
 
     <group if="$(eval team == 'kSim')">

@@ -59,5 +59,7 @@ tracked_path: "inspection_planner/results/tracked_path"
 # ROS TOPICS
 predicted_path: "inspection_planner/results/predicted_path"
 maintained_distance: "inspection_planner/results/maintained_distance"
+cropped_points: "inspection_planner/results/cropped_points"
+
 
 
