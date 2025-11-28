@@ -42,7 +42,7 @@ class PlannerCore():
         self.rtb = False
         self.current_mission_status = 'Initialization'
         
-        self.switch = False
+        self.switch = True
         self.vertical_jump = False
         self.mean_norm_LA = 0
         self.norm_LA = []
@@ -187,7 +187,7 @@ class PlannerCore():
             
             pred_pose.pose.position.x = command_pos[0]
             pred_pose.pose.position.y = command_pos[1]
-            pred_pose.pose.position.z = self.insp_height
+            pred_pose.pose.position.z = odom_pose[2]
             
             pred_pose.pose.orientation.x = cqx
             pred_pose.pose.orientation.y = cqy
@@ -202,12 +202,12 @@ class PlannerCore():
 
             # Save initial reference pose
             if k == 0:
-                command_pos[2] = self.insp_height
+                command_pos[2] = odom_pose[2]
                 cpos = command_pos
                 cyaw = command_yaw
                 refPose = pred_pose
                 
-            predPose = np.array([command_pos[0],command_pos[1],self.insp_height,cqx,cqy,cqz,cqw])
+            predPose = np.array([command_pos[0],command_pos[1],odom_pose[2],cqx,cqy,cqz,cqw])
             
             predPathArray.append(predPose)
 

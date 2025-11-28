@@ -18,6 +18,7 @@ sensor_range: [0.5,10] # [min,max] in meters
 fov: [69.4,45] #[horizontal,vertical] in degrees
 aspect_ratio: 1.33 # 640 x 480 
 rotation: [0.0,0.0,0] # in radians
+sensor_rotation: [0.0,0.0,0.0] # in radians
 translation: [0.0,0.0,0.0] # in meters
             # Camera parameters
 ###############################################
@@ -30,7 +31,7 @@ cmd_yaw_upd: 0.2 # in radians
 min_pts_conf: 5
 interpolation_alpha: 0.3
 confidence_horizon: 5
-inspection_distance: 2
+inspection_distance: 1.0
 # horizonal_overlap: 0.6
 # vertical_overalp: 0.5
 
@@ -42,7 +43,7 @@ inspection_height: 1.0
 
 ## SENSOR ROS TOPICS
 odom_topic: "odometry/imu"
-pcl_topic: "ouster/points"
+pcl_topic: "filtered_pointcloud"
 imu_topic: "imu/data"
 sbl_topic: "sbl/data"
 
@@ -51,7 +52,7 @@ sbl_topic: "sbl/data"
 takeoff_topic: "start"
 land_topic: "land"
 stop_topic: "stop"
-reference_pose: "command/pose"
+reference_pose: "command/posea"
 
 inspection_performance: "inspection_planner/results/inspection_performance"
 tracked_path: "inspection_planner/results/tracked_path"

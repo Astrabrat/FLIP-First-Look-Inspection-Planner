@@ -174,6 +174,8 @@ class PlannerNode():
             if self.sensor_rot[2] != 0.0:
                 curr_yaw = self.curr_yaw + self.sensor_rot[2]
                 curr_yaw = self.planner.normalizeAngle(curr_yaw)
+            else:
+                curr_yaw = self.curr_yaw
                 
             if np.linalg.norm(pose-self.odom_pose[0:3]) <= self.min_pos_upd and abs(yaw-curr_yaw) <= self.min_yaw_upd: ## Check the condition whre the CBF return True but the Yaw is not satisfied (in nominal as well as obstacle case)
 
@@ -213,7 +215,7 @@ class PlannerNode():
             _,_,currYaw = PlannerUtils.quat2eul(currPose[3],currPose[4],currPose[5],currPose[6])
             currPos = currPose[0:3]
         else:
-            currYaw = self.curr_yaw.copy()
+            currYaw = self.curr_yaw
 
         curr_points = point_cloud2.pointcloud2_to_xyz_array(self.raw_pts, remove_nans=True)
 
