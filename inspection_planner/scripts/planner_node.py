@@ -82,7 +82,7 @@ class PlannerNode():
         self.cbfPolicy  = rospy.ServiceProxy('cbf_input', Trigger)
 
         # Publish inspection quants
-        self.pub_insp_performance = rospy.Publisher("inspection_planner/inspection_performance",InspectionPerformance,queue_size=1)
+        self.pub_insp_performance = rospy.Publisher("inspection_planner/results/inspection_performance",InspectionPerformance,queue_size=1)
         self.path_pub = rospy.Publisher("inspection_planner/tracked_path",Path,queue_size=1)
 
         ## DEBUGGING 

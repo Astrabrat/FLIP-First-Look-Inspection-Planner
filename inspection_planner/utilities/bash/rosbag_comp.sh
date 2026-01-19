@@ -27,6 +27,7 @@ rosbag record --lz4 -o "$BAG_NAME" \
   /spot/camera/depth/camera_info \
   /spot/camera/color/image_raw \
   /spot/camera/depth/image_raw \
+  /spot/inspection_planner/results/inspection_performance \
   /spot/inspection_planner/results/cropped_points \
   /spot/inspection_planner/results/maintained_distance \
   /spot/inspection_planner/results/predicted_path \
