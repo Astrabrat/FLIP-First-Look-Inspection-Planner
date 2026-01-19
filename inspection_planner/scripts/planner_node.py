@@ -30,7 +30,7 @@ class PlannerNode():
         self.world_frame = rospy.get_param('/world_frame', 'world')
         self.run_mode = rospy.get_param('/run_mode', 1)
         self.sensor_rot = rospy.get_param('/sensor_rotation', [0.0, 0.0, 0.0])
-        self.rate_controller = rospy.get_param('/rate_controller', 10)
+        self.rate_controller = rospy.get_param('/rate_controller', 5)
         
         self.rate = rospy.Rate(self.rate_controller)
 
@@ -169,7 +169,7 @@ class PlannerNode():
             # ## Fallback incase cbf service fails
             # if resp is not None and resp.success:
                 
-            logger.debug("[Case 1] CBF Policy Triggered")
+            # logger.debug("[Case 1] CBF Policy Triggered")
             
             if self.sensor_rot[2] != 0.0:
                 curr_yaw = self.curr_yaw + self.sensor_rot[2]
@@ -247,7 +247,7 @@ class PlannerNode():
         
         insp_perf.header.stamp.secs = rospy.Time.now().secs
         insp_perf.view_planning_time.data = float(self.vp_time)
-        nmla_info, croppedPointsMsg = self.planner.nearest_surface(self.raw_pts,self.odom_pose.copy())
+        nmla_info, croppedPointsMsg = self.planner.nearest_surface(self.raw_pts,self.odom_pose.copy(),self.curr_yaw)
         insp_perf.maintained_distance.data = float(nmla_info)
         insp_perf.desired_distance.data = float(self.desired_viewing_distance)
         # insp_perf.view_quality.data = float(self.planner.viewpose_quality)
@@ -270,7 +270,7 @@ class PlannerNode():
         
         modified_yaw = self.planner.normalizeAngle(modified_yaw)
         
-        logger.debug(f"Modifying reference yaw from {current_yaw:.3f} to {modified_yaw:.3f} with an offet of {yaw_offset} radians")
+        # logger.debug(f"Modifying reference yaw from {current_yaw:.3f} to {modified_yaw:.3f} with an offet of {yaw_offset} radians")
         
         [mqx, mqy, mqz, mqw] = PlannerUtils.eul2quat(0, 0, modified_yaw)
         
@@ -285,7 +285,7 @@ class PlannerNode():
         
         while not rospy.is_shutdown():
             
-            nmla_info, croppedPointsMsg = self.planner.nearest_surface(self.raw_pts,self.odom_pose.copy())
+            nmla_info, croppedPointsMsg = self.planner.nearest_surface(self.raw_pts,self.odom_pose.copy(),self.curr_yaw)
             self.pub_cropped_points.publish(croppedPointsMsg)
 
             if self.res_start:

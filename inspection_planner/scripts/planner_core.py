@@ -42,7 +42,7 @@ class PlannerCore():
         self.rtb = False
         self.current_mission_status = 'Initialization'
         
-        self.switch = True
+        self.switch = False
         self.vertical_jump = False
         self.mean_norm_LA = 0
         self.norm_LA = []
@@ -53,12 +53,21 @@ class PlannerCore():
 
         rospy.loginfo("Sucessfully loaded parameters")
         
-    def nearest_surface(self,raw_points, odom_pose):
+    def nearest_surface(self,raw_points, odom_pose,odom_curr_yaw):
         
-        pred_pose = odom_pose.copy()  # Initialize predicted position
+        predPose = odom_pose.copy()  # Initialize predicted position
+
+        if self.sensor_rot[2] != 0.0:
+            
+            predPose = self.getRotatedOdomYaw(odom_pose.copy(),self.sensor_rot[2])
+            _,_,currYaw = PlannerUtils.quat2eul(predPose[3],predPose[4],predPose[5],predPose[6])
+            currPos = predPose[0:3]
+        else:
+            currYaw = odom_curr_yaw
+
         points = point_cloud2.pointcloud2_to_xyz_array(raw_points, remove_nans=True)
         
-        cpoints,croppedPointsMsg = PlannerUtils.crop_points_within_fov(points,pred_pose)
+        cpoints,croppedPointsMsg = PlannerUtils.crop_points_within_fov(points,predPose)
         
         # self.pub_cropped_points.publish(croppedPointsMsg)
         
@@ -73,11 +82,11 @@ class PlannerCore():
             tpoints = cpoints
             
         # Find the nearest interest point
-        dist, interestPointIdx = tree.query(pred_pose[0:3], k=1, workers=-1)
+        dist, interestPointIdx = tree.query(predPose[0:3], k=1, workers=-1)
         interestPoint = tpoints[interestPointIdx]
 
         # Compute direction vectors
-        look_at = interestPoint - pred_pose[0:3]
+        look_at = interestPoint - predPose[0:3]
         norm_lookat = np.linalg.norm(look_at)
         
         return norm_lookat, croppedPointsMsg
@@ -180,6 +189,8 @@ class PlannerCore():
             # command_yaw = command_yaw - self.sensor_rot[2]
             [cqx, cqy, cqz, cqw] = PlannerUtils.eul2quat(0, 0, command_yaw)
 
+            logger.debug(f"commadn_yaw{command_yaw}")
+
             # Populate PoseStamped message
             pred_pose = PoseStamped()
             pred_pose.header.stamp = rospy.Time.now()
@@ -198,7 +209,7 @@ class PlannerCore():
             pred_path.header.stamp = rospy.Time.now()
             pred_path.poses.append(pred_pose)
 
-            logger.debug(f"{command_pos}, {pred_pos}")
+            # logger.debug(f"{command_pos}, {pred_pos}")
 
             # Save initial reference pose
             if k == 0:

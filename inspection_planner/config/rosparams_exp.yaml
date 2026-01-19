@@ -18,10 +18,12 @@ sensor_range: [0.5,10] # [min,max] in meters
 fov: [69.4,45] #[horizontal,vertical] in degrees
 aspect_ratio: 1.33 # 640 x 480 
 rotation: [0.0,0.0,0] # in radians
-sensor_rotation: [0.0,0.0,0.0] # in radians
+sensor_rotation: [0.0,0.0,-1.57] # in radians
 translation: [0.0,0.0,0.0] # in meters
             # Camera parameters
 ###############################################
+
+rate_controller: 5
 
 max_std_deviation: 1 # meters
 adaptive_factor: 0.00
@@ -52,7 +54,7 @@ sbl_topic: "sbl/data"
 takeoff_topic: "start"
 land_topic: "land"
 stop_topic: "stop"
-reference_pose: "command/posea"
+reference_pose: "command/pose"
 
 inspection_performance: "inspection_planner/results/inspection_performance"
 tracked_path: "inspection_planner/results/tracked_path"
