@@ -119,6 +119,7 @@ class PlannerCore():
         dZ = np.cross(dX, dY, axis=0)
 
         # Compute distance difference
+        self.desired_viewing_distance = rospy.get_param('/inspection_distance', 2.0)
         diff_view_dist = dist - self.desired_viewing_distance
 
         # Initialize command position

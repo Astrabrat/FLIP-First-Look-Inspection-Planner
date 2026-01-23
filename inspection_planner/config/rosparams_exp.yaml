@@ -27,17 +27,17 @@ rate_controller: 5
 
 max_std_deviation: 1 # meters
 adaptive_factor: 0.00
-cmd_pos_upd: 0.35 # in meters
-cmd_yaw_upd: 0.2 # in radians
+cmd_pos_upd: 0.25 # in meters
+cmd_yaw_upd: 0.3 # in radians
 
 min_pts_conf: 5
-interpolation_alpha: 0.3
+interpolation_alpha: 0.4
 confidence_horizon: 5
-inspection_distance: 0.8
+inspection_distance: 1.5
 # horizonal_overlap: 0.6
 # vertical_overalp: 0.5
 
-photogrammetric_params: [0.2,0.01]
+photogrammetric_params: [0.5,0.01]
 prediction_horizon: 5
 
 FretD_confidence: 0.5

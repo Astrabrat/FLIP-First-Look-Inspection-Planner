@@ -381,7 +381,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         if increment_fov:
             cos_thresh = np.cos(np.deg2rad(30))
         else:
-            cos_thresh = np.cos(np.deg2rad(60))
+            cos_thresh = np.cos(np.deg2rad(30))
         # clip for safety if you later use arccos (here we don't need arccos)
         dots = np.clip(vhat[:, 0], -1.0, 1.0)
 

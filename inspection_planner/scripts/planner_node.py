@@ -80,6 +80,7 @@ class PlannerNode():
         
         ## Viswa Control Law 
         self.cbfPolicy  = rospy.ServiceProxy('cbf_input', Trigger)
+    
 
         # Publish inspection quants
         self.pub_insp_performance = rospy.Publisher("inspection_planner/results/inspection_performance",InspectionPerformance,queue_size=1)
@@ -99,7 +100,7 @@ class PlannerNode():
         
         self.res_start = True
         return TriggerResponse(success=True)
-        
+    
             
     def cb_pointcloud(self,data):
         
@@ -249,6 +250,7 @@ class PlannerNode():
         insp_perf.view_planning_time.data = float(self.vp_time)
         nmla_info, croppedPointsMsg = self.planner.nearest_surface(self.raw_pts,self.odom_pose.copy(),self.curr_yaw)
         insp_perf.maintained_distance.data = float(nmla_info)
+        self.desired_viewing_distance = rospy.get_param('/inspection_distance', 2.0)
         insp_perf.desired_distance.data = float(self.desired_viewing_distance)
         # insp_perf.view_quality.data = float(self.planner.viewpose_quality)
 

@@ -31,9 +31,15 @@ rosbag record --lz4 -o "$BAG_NAME" \
   /spot/inspection_planner/results/cropped_points \
   /spot/inspection_planner/results/maintained_distance \
   /spot/inspection_planner/results/predicted_path \
+  /spot/inspection_planner/tracked_path \
   /spot/filtered_pointcloud \
-  /cpu_monitor/spot/inspection_planner/planner_node/cpu \
+  /cpu_monitor/spot/planner_node/cpu \
+  /cpu_monitor/cbf_velocity_controller/cpu \
   /spot/command/pose \
+  /spot/cmd_vel \
+  /cbf_safe_set \
+
+
 
 
 
