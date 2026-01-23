@@ -13,7 +13,7 @@ sensor_modality: 0 #0: Stereo-optical camera, 1: livox avia (limited FOV), 2: ou
             # Camera parameters
 max_sensor_range: 10
 min_sensor_range: 0.5
-sensor_range: [0.5,10] # [min,max] in meters
+sensor_range: [0.3,10] # [min,max] in meters
 
 fov: [69.4,45] #[horizontal,vertical] in degrees
 aspect_ratio: 1.33 # 640 x 480 
@@ -33,11 +33,11 @@ cmd_yaw_upd: 0.2 # in radians
 min_pts_conf: 5
 interpolation_alpha: 0.3
 confidence_horizon: 5
-inspection_distance: 1.0
+inspection_distance: 0.8
 # horizonal_overlap: 0.6
 # vertical_overalp: 0.5
 
-photogrammetric_params: [0.6,0.01]
+photogrammetric_params: [0.2,0.01]
 prediction_horizon: 5
 
 FretD_confidence: 0.5
