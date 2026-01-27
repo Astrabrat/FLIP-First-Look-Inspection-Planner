@@ -159,7 +159,7 @@ class SensorModel():
         return [right_face_vertex_list,left_face_vertex_list,top_face_vertex_list,bottom_face_vertex_list]
 
 
-class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
+class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
     
     class LoadSensorParams:
         
@@ -226,7 +226,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         
     def GetRotmat_B2W(world_state):
 
-        roll, pitch, yaw = GeckoPlannerUtils.quat2eul(world_state[3], world_state[4], world_state[5], world_state[6])
+        roll, pitch, yaw = PlannerUtils.quat2eul(world_state[3], world_state[4], world_state[5], world_state[6])
         rot_B2W = R.from_euler("XYZ", [roll, pitch, yaw], degrees=False).inv()
         
         return rot_B2W
@@ -301,15 +301,15 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
             if ca[i, j] > -1:
                 return ca[i, j]
             elif i == 0 and j == 0:
-                ca[i, j] = GeckoPlannerUtils.euclidean_distance_3d(P[0], Q[0])
+                ca[i, j] = PlannerUtils.euclidean_distance_3d(P[0], Q[0])
             elif i > 0 and j == 0:
-                ca[i, j] = max(c(i - 1, 0), GeckoPlannerUtils.euclidean_distance_3d(P[i], Q[0]))
+                ca[i, j] = max(c(i - 1, 0), PlannerUtils.euclidean_distance_3d(P[i], Q[0]))
             elif i == 0 and j > 0:
-                ca[i, j] = max(c(0, j - 1), GeckoPlannerUtils.euclidean_distance_3d(P[0], Q[j]))
+                ca[i, j] = max(c(0, j - 1), PlannerUtils.euclidean_distance_3d(P[0], Q[j]))
             elif i > 0 and j > 0:
                 ca[i, j] = max(
                     min(c(i - 1, j), c(i - 1, j - 1), c(i, j - 1)),
-                    GeckoPlannerUtils.euclidean_distance_3d(P[i], Q[j])
+                    PlannerUtils.euclidean_distance_3d(P[i], Q[j])
                 )
             else:
                 ca[i, j] = float('inf')
@@ -352,7 +352,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         
         return bufferQ
 
-    def crop_points_within_fov(points,odom_pose):
+    def crop_points_within_fov(points,odom_pose,increment_fov=False):
         
         # odom_pose = [x, y, z, qx, qy, qz, qw]
         t = np.asarray(odom_pose[:3])
@@ -378,7 +378,10 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         vhat[valid] = p_yaw[valid] / norms[valid, None]
 
         # dot with x-axis == vhat[:,0]
-        cos_thresh = np.cos(np.deg2rad(15))
+        if increment_fov:
+            cos_thresh = np.cos(np.deg2rad(30))
+        else:
+            cos_thresh = np.cos(np.deg2rad(30))
         # clip for safety if you later use arccos (here we don't need arccos)
         dots = np.clip(vhat[:, 0], -1.0, 1.0)
 
@@ -460,7 +463,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         return pose_msg
 
     def dtw_se3(A, B, w_pos=1.0, w_rot=1.0, pos_norm="l2", band=None,return_locals=False):
-        return  GeckoPlannerUtils.dtw_path(A, B, lambda a,b: GeckoPlannerUtils.se3_step_cost(a,b,w_pos,w_rot,pos_norm), band=band,return_locals=return_locals)
+        return  PlannerUtils.dtw_path(A, B, lambda a,b: PlannerUtils.se3_step_cost(a,b,w_pos,w_rot,pos_norm), band=band,return_locals=return_locals)
 
     def _quat_normalize(q):
         n = np.linalg.norm(q)
@@ -472,8 +475,8 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         Handles the double cover via abs(dot).
         Result in [0, pi].
         """
-        q1 = GeckoPlannerUtils._quat_normalize(q1)
-        q2 = GeckoPlannerUtils._quat_normalize(q2)
+        q1 = PlannerUtils._quat_normalize(q1)
+        q2 = PlannerUtils._quat_normalize(q2)
         d = float(np.abs(np.dot(q1, q2)))
         d = np.clip(d, -1.0, 1.0)
         return 2.0 * np.arccos(d)
@@ -484,7 +487,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         """
         dp = a[:3] - b[:3]
         pos_err = np.linalg.norm(dp) if pos_norm == "l2" else np.abs(dp).sum()
-        ang =  GeckoPlannerUtils._quat_geodesic_angle(a[3:], b[3:])
+        ang =  PlannerUtils._quat_geodesic_angle(a[3:], b[3:])
         return w_pos * pos_err + w_rot * ang
     
     def dtw_path(A, B, step_cost_fn, band=None,return_locals=False):
@@ -672,7 +675,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         c = 1 / sigma_x * np.trace(np.diag(d).dot(s)) if with_scale else 1.0
         t = mean_y - np.multiply(c, r.dot(mean_x))
 
-        return  GeckoPlannerUtils.applyUmeyamaAlignment(r,t,c,y)
+        return  PlannerUtils.applyUmeyamaAlignment(r,t,c,y)
     
     def se3_inverse(p: np.ndarray) -> np.ndarray:
         """
@@ -681,14 +684,14 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         """
         r_inv = p[:3, :3].transpose()
         t_inv = -r_inv.dot(p[:3, 3])
-        return GeckoPlannerUtils.se3(r_inv, t_inv)
+        return PlannerUtils.se3(r_inv, t_inv)
 
     def relative_se3(p1: np.ndarray, p2: np.ndarray) -> np.ndarray:
         """
         :param p1, p2: SE(3) matrices
         :return: the relative transformation p1^{⁻1} * p2
         """
-        return np.dot(GeckoPlannerUtils.se3_inverse(p1), p2)
+        return np.dot(PlannerUtils.se3_inverse(p1), p2)
 
     def transform(poses,t: np.ndarray, right_mul: bool = False,
                   propagate: bool = False):
@@ -708,7 +711,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
             # Transform each pose and propagate resulting drift to the next.
             ids = np.arange(0, num_poses, 1, dtype=int)
             rel_poses = [
-                GeckoPlannerUtils.relative_se3(poses[i], poses[j]).dot(t)
+                PlannerUtils.relative_se3(poses[i], poses[j]).dot(t)
                 for i, j in zip(ids, ids[1:])
             ]
             poses_se3 = [poses[0]]
@@ -733,11 +736,11 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
 
     def applyUmeyamaAlignment(rot_mat,trans_vec,c,reference_path):
         
-        TMat = GeckoPlannerUtils.se3(rot_mat,trans_vec)
+        TMat = PlannerUtils.se3(rot_mat,trans_vec)
         
         new_poses = np.array([[pos[0], pos[1], pos[2], 1] for pos in reference_path])  # shape (4, N)
         
-        aligned_path = GeckoPlannerUtils.transform(new_poses,TMat)
+        aligned_path = PlannerUtils.transform(new_poses,TMat)
         
         print(">>>>",aligned_path)
 
@@ -868,7 +871,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         
         return TSPPath
 
-    def distance_matrix(self,data, metric='euclidean'):
+    def distance_matrix(self,data, metric='euclidean',weighted_height=False):
         """
         Calculates the distance matrix for a given data matrix.
 
@@ -885,7 +888,11 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         for i in range(n):
             for j in range(i, n):
                 if metric == 'euclidean':
-                    distance = np.linalg.norm(data[i] - data[j])
+                    if not weighted_height:
+                        
+                        distance = np.linalg.norm(data[i] - data[j]) 
+                    else:
+                        distance = np.linalg.norm(data[i] - data[j]) + 10*(data[i,2] - data[j,2])
                 elif metric == 'manhattan':
                     distance = np.sum(np.abs(data[i] - data[j]))
                 else:
@@ -979,7 +986,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
 
         for i in range(0,5000):
             solution = tempsol
-            GeckoPlannerUtils.relocate(solution,cost,cuslist,data)
+            PlannerUtils.relocate(solution,cost,cuslist,data)
             if (max(cost)-bestcost)/bestcost < temperature:
                 tempsol = solution
                 if max(cost) < bestcost:
@@ -1004,7 +1011,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
 
         nm_la = la/np.linalg.norm(la)
         cd_yaw = np.arctan2(nm_la[1],nm_la[0])
-        qx,qy,qz,qw = GeckoPlannerUtils.eul2quat(0,0,cd_yaw)
+        qx,qy,qz,qw = PlannerUtils.eul2quat(0,0,cd_yaw)
 
         return qx,qy,qz,qw
 
@@ -1113,7 +1120,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         
         for index,pose in enumerate(path):
             
-            pathPoint = GeckoPlannerUtils.getPointMsg(pose[0],pose[1],pose[2])
+            pathPoint = PlannerUtils.getPointMsg(pose[0],pose[1],pose[2])
             
             pathMarker.points.append(pathPoint)
 
@@ -1619,7 +1626,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
                 
             proj_centroid = centroid - viewing_distance * local_normals[0]
             
-            cqx,cqy,cqz,cqw = GeckoPlannerUtils.GetLookAtOrientation(proj_centroid,centroid)
+            cqx,cqy,cqz,cqw = PlannerUtils.GetLookAtOrientation(proj_centroid,centroid)
             
             centroidPose = np.array([proj_centroid[0],proj_centroid[1],proj_centroid[2],cqx,cqy,cqz,cqw])
 
@@ -1634,7 +1641,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
             all_marker_array = MarkerArray()
             marker_id = 0
             
-            InspPlan = GeckoPlannerUtils.InspectionPlan()
+            InspPlan = PlannerUtils.InspectionPlan()
 
             InspPlan.number_of_rois = len(roi_polygons.polygons)
 
@@ -1752,7 +1759,7 @@ class GeckoPlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
                     end_pt = Point()
                     end_pt.x, end_pt.y, end_pt.z = target
                     
-                    qx,qy,qz,qw = GeckoPlannerUtils.GetLookAtOrientation(cam_pos, target)
+                    qx,qy,qz,qw = PlannerUtils.GetLookAtOrientation(cam_pos, target)
                     cam_att_list.append([qx,qy,qz,qw])
                     arrow_marker.points.append(start_pt)
                     arrow_marker.points.append(end_pt)

@@ -1,0 +1,32 @@
+<launch>
+
+    <arg name="team" default='kReal'/>
+    <arg name="robot" default='spot'/>
+
+
+   <!-- <arg name="team" default='kSim'/>
+    <arg name="robot" default='pelican'/> -->
+
+
+    <group if="$(eval team == 'kSim')">
+        <node pkg="tf2_ros" type="static_transform_publisher" name="static_tf_publisher" args="0 0 0 0 0 0 world pelican/odom" output="screen"/>
+        <rosparam command="load" file="$(find inspection_planner)/config/rosparams_sims.yaml"/>
+
+        <group ns="$(arg robot)">
+             <node pkg="inspection_planner" name="planner_node" type="planner_node.py" output="screen"/>
+            <!-- <node pkg="gecko_inspection_planner" name="command_node" type="gecko_command.py" output="screen"/> -->
+        </group>
+    </group>
+    <group if="$(eval team == 'kReal')">
+        <node pkg="tf2_ros" type="static_transform_publisher" name="static_tf_publisher" args="0 0 0 0 0 0 world spot/odom" output="screen"/>
+        <rosparam command="load" file="$(find inspection_planner)/config/rosparams_exp.yaml"/>
+
+        <group ns="$(arg robot)">
+            <node pkg="inspection_planner" name="planner_node" type="planner_node.py" output="screen"/>
+            <!-- <node pkg="gecko_inspection_planner" name="command_node" type="gecko_command.py" output="screen"/> -->
+            <!-- <node pkg="gecko_inspection_planner" name="oversight_node" type="gecko_angel.py" output="screen"/> -->
+        </group>
+
+    </group>
+
+</launch>

@@ -1,0 +1,90 @@
+<launch>
+
+   
+    <!-- <arg name="team" default='kReal'/>
+    <arg name="robot" default='spot'/> -->
+
+   <arg name="team" default='kSim'/>
+    <arg name="robot" default='pelican'/>
+    
+    <group if="$(eval team == 'kSim')">
+        
+        <arg name="frame_id" default="world" />
+      <group ns="$(arg robot)">
+
+        <node pkg="pcl_transformer" type="pcl_transformer" name="pcl_transformer" output="screen">
+            
+
+          <param name="odometry" value="/pelican/ground_truth/odometry" /> 
+          <!-- /pelican/cam0/camera/depth/color/points -->
+           <!-- /pelican/velodyne_points -->
+          <param name="input_pointcloud" value="/pelican/velodyne_points" />
+          <param name="output_pointcloud" value="filtered_pointcloud" />
+          <param name="sensor" value="lidar" />
+          <param name="frame_id" value="$(arg frame_id)" />
+
+          <!-- Configuration for lidar -->
+
+          <!-- Configuration for lidar -->
+          <param name="filter_min_x" value="0" />
+          <param name="filter_max_x" value="10" />
+          <param name="filter_min_y" value="-10" />
+          <param name="filter_max_y" value="10" />
+          <param name="filter_min_z" value="-8" />
+          <param name="filter_max_z" value="8" />
+
+            <!-- Configuration for depth -->
+          <!-- <param name="filter_min_x" value="0.5" />
+          <param name="filter_max_x" value="10" />
+          <param name="filter_min_y" value="-10" />
+          <param name="filter_max_y" value="10" /> -->
+          <!-- <param name="filter_min_z" value="0.2" />
+          <param name="filter_max_z" value="10" /> -->
+
+        </node>
+      </group>
+
+    </group>
+
+    <group if="$(eval team == 'kReal')">
+
+        <arg name="frame_id" default="spot/odom" />
+
+      <group ns="$(arg robot)">
+
+        <node pkg="pcl_transformer" type="pcl_transformer" name="pcl_transformer" output="screen">
+
+         <param name="odometry" value="/spot/odometry/imu" />
+          <!-- /spot/camera/depth_registered/points -->
+
+          <!-- <param name="input_pointcloud" value="/spot/camera/depth_registered/points" /> -->
+          <!-- <param name="sensor" value="depth_camera" /> -->
+
+          <param name="input_pointcloud" value="/spot/ouster/points" />
+          <param name="sensor" value="lidar" />
+
+          <param name="output_pointcloud" value="/spot/filtered_pointcloud" />
+          <param name="frame_id" value="$(arg frame_id)" />
+
+          <!-- Configuration for lidar -->
+          <param name="filter_min_x" value="10" />
+          <param name="filter_max_x" value="-10" />
+          <param name="filter_min_y" value="-10" />
+          <param name="filter_max_y" value="0" />
+          <param name="filter_min_z" value="0" />
+          <param name="filter_max_z" value="8" />
+
+
+            <!-- Configuration for depth
+          <param name="filter_min_x" value="0.5" />
+          <param name="filter_max_x" value="10" />
+          <param name="filter_min_y" value="-10" />
+          <param name="filter_max_y" value="0.2" />
+          <param name="filter_min_z" value="0.2" />
+          <param name="filter_max_z" value="10" /> -->
+        </node>
+      </group>
+      
+    </group>
+
+ </launch>

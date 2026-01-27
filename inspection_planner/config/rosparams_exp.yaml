@@ -1,0 +1,68 @@
+world_frame: "spot/odom"
+sensor_frame: "spot/base_link"
+base_link_frame: "spot/base_link"
+
+platform_modality: 0 # 0: ground, 1: aerial, 2: underwater
+run_mode: 1 #0: debug, 1: release
+
+## sensor params
+
+sensor_modality: 0 #0: Stereo-optical camera, 1: livox avia (limited FOV), 2: ouster/vlp16
+
+############################################### 
+            # Camera parameters
+max_sensor_range: 10
+min_sensor_range: 0.5
+sensor_range: [0.3,10] # [min,max] in meters
+
+fov: [69.4,45] #[horizontal,vertical] in degrees
+aspect_ratio: 1.33 # 640 x 480 
+rotation: [0.0,0.0,0] # in radians
+sensor_rotation: [0.0,0.0,-1.57] # in radians
+translation: [0.0,0.0,0.0] # in meters
+            # Camera parameters
+###############################################
+
+rate_controller: 5
+
+max_std_deviation: 1 # meters
+adaptive_factor: 0.00
+cmd_pos_upd: 0.25 # in meters
+cmd_yaw_upd: 0.3 # in radians
+
+min_pts_conf: 5
+interpolation_alpha: 0.4
+confidence_horizon: 5
+inspection_distance: 1.5
+# horizonal_overlap: 0.6
+# vertical_overalp: 0.5
+
+photogrammetric_params: [0.5,0.01]
+prediction_horizon: 5
+
+FretD_confidence: 0.5
+inspection_height: 1.0
+
+## SENSOR ROS TOPICS
+odom_topic: "odometry/imu"
+pcl_topic: "filtered_pointcloud"
+imu_topic: "imu/data"
+sbl_topic: "sbl/data"
+
+## COMMAND ROS TOPICS
+
+takeoff_topic: "start"
+land_topic: "land"
+stop_topic: "stop"
+reference_pose: "command/pose"
+
+inspection_performance: "inspection_planner/results/inspection_performance"
+tracked_path: "inspection_planner/results/tracked_path"
+
+# ROS TOPICS
+predicted_path: "inspection_planner/results/predicted_path"
+maintained_distance: "inspection_planner/results/maintained_distance"
+cropped_points: "inspection_planner/results/cropped_points"
+
+
+
