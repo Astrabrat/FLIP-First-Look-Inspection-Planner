@@ -1,24 +1,24 @@
 # Dockerfile
-FROM osrf/ros:jazzy-desktop-noble
+FROM osrf/ros:humble-desktop-full
 
 SHELL ["/bin/bash", "-lc"]
 
 ENV DEBIAN_FRONTEND=noninteractive \
-    ROS_DISTRO=jazzy \
+    ROS_DISTRO=humble \
     LANG=C.UTF-8 \
     LC_ALL=C.UTF-8
 
 # Basic dev tools + ROS build tooling
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl wget nano vim tmux \
+    git curl wget tmux \
     build-essential cmake pkg-config \
     python3-pip python3-venv \
     python3-colcon-common-extensions \
     python3-rosdep python3-vcstool \
     # helpful ROS tools
-    ros-jazzy-rqt \
-    ros-jazzy-rqt-common-plugins \
-    ros-jazzy-tf2-tools \
+    ros-humble-rqt \
+    ros-humble-rqt-common-plugins \
+    ros-humble-tf2-tools \
 
  && rm -rf /var/lib/apt/lists/*
 

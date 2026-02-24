@@ -1,6 +1,6 @@
 #! usr/bin/env python3 
 
-from header import *
+from inspection_planner.header import *
 from dataclasses import dataclass
 import heapq
 import ttictoc
@@ -160,20 +160,54 @@ class SensorModel():
 
 
 class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
+
+    # Optional ROS 2 node handle for parameter/time access.
+    # This keeps the rest of the code very close to the ROS 1 version.
+    _node = None
+
+    @classmethod
+    def set_node(cls, node):
+        cls._node = node
+
+    @classmethod
+    def _get_param(cls, name, default=None):
+        if cls._node is None:
+            return default
+        if isinstance(name, str):
+            if name.startswith('/'):
+                key = name[1:]
+            elif name.startswith('~'):
+                key = name[1:]
+            else:
+                key = name
+        else:
+            key = name
+        try:
+            if cls._node.has_parameter(key):
+                return cls._node.get_parameter(key).value
+            return cls._node.get_parameter(key).value
+        except Exception:
+            return default
+
+    @classmethod
+    def _now_msg(cls):
+        if cls._node is None:
+            return rclpy.clock.Clock().now().to_msg()
+        return cls._node.get_clock().now().to_msg()
     
     class LoadSensorParams:
         
         def __init__(self):
             
-            ns_ = rospy.get_param("/robot_namespace")
-            sensor_type = rospy.get_param("/sensor_modality")
-            fov = rospy.get_param("/fov")
-            ar = rospy.get_param("/aspect_ratio")
-            sensor_range = rospy.get_param("/sensor_range")
+            ns_ = PlannerUtils._get_param("/robot_namespace", "")
+            sensor_type = PlannerUtils._get_param("/sensor_modality", 0)
+            fov = PlannerUtils._get_param("/fov", [69.4, 45])
+            ar = PlannerUtils._get_param("/aspect_ratio", 1.33)
+            sensor_range = PlannerUtils._get_param("/sensor_range", [0.3, 10.0])
             
             if sensor_type == 0 : # For camera
                 
-                rot_params = rospy.get_param("/rotation")
+                rot_params = PlannerUtils._get_param("/rotation", [0.0, 0.0, 0.0])
                 rot_euler = np.array([rot_params[0],rot_params[1],rot_params[2]])
                 rot_B2S = R.from_euler("XYZ",rot_euler,degrees=False)
             
@@ -246,8 +280,8 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
 
             # print("centroid",centroid)
             pose_msg = PoseStamped()
-            pose_msg.header.frame_id = rospy.get_param("/world_frame")
-            pose_msg.header.stamp = rospy.Time.now()
+            pose_msg.header.frame_id = PlannerUtils._get_param("/world_frame", "world")
+            pose_msg.header.stamp = PlannerUtils._now_msg()
             
             pose_msg.pose.position.x = centroid[0]
             pose_msg.pose.position.y = centroid[1]
@@ -351,6 +385,34 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         tee(viewpoints_iterator,prediction_horizon)
         
         return bufferQ
+    
+    def pc2_to_xyz(raw_points) -> np.ndarray:
+        # Force a structured numpy array with fields x,y,z
+        t = np.array(
+            list(point_cloud2.read_points(
+                raw_points,
+                field_names=("x", "y", "z"),
+                skip_nans=False,
+            ))
+        )
+
+        if t.size == 0:
+            return np.empty((0, 3), dtype=np.float32)
+
+        # If it's structured (has named fields), stack them
+        if t.dtype.names is not None:
+            pts = np.column_stack((t["x"], t["y"], t["z"])).astype(np.float32, copy=False)
+        else:
+            # Otherwise it's already Nx3-like
+            pts = np.asarray(t, dtype=np.float32)
+            if pts.ndim == 1:
+                pts = pts.reshape(-1, 3)
+            else:
+                pts = pts[:, :3]
+
+        # Drop NaN/Inf rows
+        pts = pts[np.isfinite(pts).all(axis=1)]
+        return pts
 
     def crop_points_within_fov(points,odom_pose,increment_fov=False):
         
@@ -390,15 +452,16 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
 
         # (Optional) publish as PointCloud2
         pcl = PointCloud2()
-        pcl.header.frame_id = rospy.get_param("/world_frame")
-        pcl.header.stamp = rospy.Time.now()
+        pcl.header.frame_id = PlannerUtils._get_param("/world_frame", "world")
+        pcl.header.stamp = PlannerUtils._now_msg()
 
         fields = [
-            PointField('x', 0, PointField.FLOAT32, 1),
-            PointField('y', 4, PointField.FLOAT32, 1),
-            PointField('z', 8, PointField.FLOAT32, 1),
+            PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+            PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+            PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
         ]
-        pointcloudMsg = pcl2_msg.create_cloud(pcl.header, fields, cropped_points.tolist())
+
+        pointcloudMsg = point_cloud2.create_cloud(pcl.header, fields, cropped_points.tolist())
         return cropped_points, pointcloudMsg
 
     def PoseArraytoPathMsg(path,ref_alt=None):
@@ -411,14 +474,14 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         #     return None
         
         pathMsg = Path()
-        pathMsg.header.frame_id = rospy.get_param("/world_frame")
-        pathMsg.header.stamp = rospy.Time.now()
+        pathMsg.header.frame_id = PlannerUtils._get_param("/world_frame", "world")
+        pathMsg.header.stamp = PlannerUtils._now_msg()
         
         for pose in path:
         
             pose_msg = PoseStamped()
-            pose_msg.header.frame_id = rospy.get_param("/world_frame")
-            pose_msg.header.stamp = rospy.Time.now()
+            pose_msg.header.frame_id = PlannerUtils._get_param("/world_frame", "world")
+            pose_msg.header.stamp = PlannerUtils._now_msg()
             
             pose_msg.pose.position.x = pose[0]
             pose_msg.pose.position.y = pose[1]
@@ -448,8 +511,8 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         
         
         pose_msg = PoseStamped()
-        pose_msg.header.frame_id = rospy.get_param("/world_frame")
-        pose_msg.header.stamp = rospy.Time.now()
+        pose_msg.header.frame_id = PlannerUtils._get_param("/world_frame", "world")
+        pose_msg.header.stamp = PlannerUtils._now_msg()
         
         pose_msg.pose.position.x = pose[0]
         pose_msg.pose.position.y = pose[1]
@@ -837,7 +900,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
     def GetPathfromTSPTour(plan,tour):
         
         # Get the fixed frame id from server
-        fixed_frame = rospy.get_param("/world_frame")
+        fixed_frame = PlannerUtils._get_param("/world_frame", "world")
     
         # Initialize the path container
         TSPPath = Path()
@@ -853,7 +916,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
             # Initialize pose container for the tour
             TSPPose = PoseStamped()
             TSPPose.header.frame_id = fixed_frame
-            TSPPose.header.stamp = rospy.Time.now()
+            TSPPose.header.stamp = PlannerUtils._now_msg()
             
             TSPPose.pose.position.x = plan[index][0]
             TSPPose.pose.position.y = plan[index][1]
@@ -866,7 +929,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
             
             TSPPath.poses.append(TSPPose)
         
-        TSPPath.header.stamp = rospy.Time.now()
+        TSPPath.header.stamp = PlannerUtils._now_msg()
         # logger.debug("TSP Path: {}".format(TSPPath))
         
         return TSPPath
@@ -1106,8 +1169,8 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         DTWmarkerArray = MarkerArray()
         
         pathMarker = Marker()
-        pathMarker.header.stamp = rospy.Time.now()
-        pathMarker.header.frame_id = rospy.get_param("/world_frame")
+        pathMarker.header.stamp = PlannerUtils._now_msg()
+        pathMarker.header.frame_id = PlannerUtils._get_param("/world_frame", "world")
         
         pathMarker.ns = "fretd_path"
         pathMarker.id = 0
@@ -1166,8 +1229,8 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
             
             # Visualize the path as a line strip
             path_marker = Marker()
-            path_marker.header.frame_id = rospy.get_param('/world_frame')
-            path_marker.header.stamp = rospy.Time.now()            
+            path_marker.header.frame_id = PlannerUtils._get_param('/world_frame', 'world')
+            path_marker.header.stamp = PlannerUtils._now_msg()            
 
             path_marker.type = Marker.LINE_STRIP
             
@@ -1177,9 +1240,6 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
             #Create a markerarray 
 
             path_marker.id = path_id
-            
-
-                
             
             path_marker.action = Marker.ADD
                 
@@ -1201,8 +1261,8 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
 
             pose_marker = Marker()
                 
-            pose_marker.header.frame_id = rospy.get_param('/world_frame')
-            pose_marker.header.stamp = rospy.Time.now()
+            pose_marker.header.frame_id = PlannerUtils._get_param('/world_frame', 'world')
+            pose_marker.header.stamp = PlannerUtils._now_msg()
             
             pose_marker.type = Marker.SPHERE_LIST
             pose_marker.action = Marker.ADD
@@ -1364,15 +1424,15 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         def __init__(self):
 
             # Parameters (can be set via ROS params or defaulted here)
-            self.viewing_distance = rospy.get_param("/inspection_distance", 3.0)  # distance along normal
-            cameraFOV =      rospy.get_param("/fov", [69.4,45])          
-            overlapParam = rospy.get_param("/photogrammetric_params", [0.6,0.5])                  # vertical overlap fraction
+            self.viewing_distance = PlannerUtils._get_param("/inspection_distance", 3.0)  # distance along normal
+            cameraFOV = PlannerUtils._get_param("/fov", [69.4, 45])
+            overlapParam = PlannerUtils._get_param("/photogrammetric_params", [0.6, 0.5])  # vertical overlap fraction
             
             logger.debug(f"overlap: {overlapParam}")
             
-            self.k = rospy.get_param("~k", 4)
-            self.adapt_to_roi_angle = rospy.get_param("~roi_angle",False)
-            self.glocal_adaptive = rospy.get_param("~adaptive_to_surface", 0.5)
+            self.k = PlannerUtils._get_param("~k", 4)
+            self.adapt_to_roi_angle = PlannerUtils._get_param("~roi_angle", False)
+            self.glocal_adaptive = PlannerUtils._get_param("~adaptive_to_surface", 0.5)
             
             self.fov_h_deg = cameraFOV[0]
             self.fov_v_deg = cameraFOV[1]
@@ -1682,7 +1742,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
                 # ROI Polygon Marker (red LINE_STRIP)
                 roi_marker = Marker()
                 roi_marker.header.frame_id = frame_id
-                roi_marker.header.stamp = rospy.Time.now()
+                roi_marker.header.stamp = PlannerUtils._now_msg()
                 roi_marker.ns = "roi_polygon"
                 roi_marker.id = marker_id
                 marker_id += 1
@@ -1721,7 +1781,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
                     # Marker for camera position (blue sphere).
                     cam_marker = Marker()
                     cam_marker.header.frame_id = frame_id
-                    cam_marker.header.stamp = rospy.Time.now()
+                    cam_marker.header.stamp = PlannerUtils._now_msg()
                     cam_marker.ns = "camera_pose"
                     cam_marker.id = marker_id
                     marker_id += 1
@@ -1747,7 +1807,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
                     # Marker for camera view direction (green arrow from camera to target).
                     arrow_marker = Marker()
                     arrow_marker.header.frame_id = frame_id
-                    arrow_marker.header.stamp = rospy.Time.now()
+                    arrow_marker.header.stamp = PlannerUtils._now_msg()
                     arrow_marker.ns = "camera_direction"
                     arrow_marker.id = marker_id
                     marker_id += 1

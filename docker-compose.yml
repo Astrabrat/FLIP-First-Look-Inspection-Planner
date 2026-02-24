@@ -1,8 +1,8 @@
 services:
   ros2:
     build: .
-    image: jazzy_planning_dev:latest
-    container_name: jazzy_planning_dev
+    image: humble_planning_dev:latest
+    container_name: humble_planning_dev
 
     # Best option for ROS 2 on LAN (DDS multicast/discovery, robot connectivity)
     network_mode: host
@@ -23,7 +23,7 @@ services:
       # X11 socket
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       # Your workspace (edit path on the left if you want)
-      - ../../../:/inspection_ws:rw
+      - ../../:/inspection_ws:rw
       # Persist ROS logs
       - ~/.ros:/root/.ros:rw
 

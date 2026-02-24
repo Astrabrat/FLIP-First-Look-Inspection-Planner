@@ -1,9 +1,9 @@
-#InspectionPerformance.msg
+# InspectionPerformance.msg
 
 # Standard ROS header
 std_msgs/Header header
 
-#evaluation
+# evaluation
 std_msgs/Float64 view_planning_time
 
 # Mission status
