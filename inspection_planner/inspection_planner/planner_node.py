@@ -10,6 +10,9 @@ from rclpy.qos import QoSProfile
 from inspection_planner.planner_core import PlannerCore
 from inspection_planner.utils import PlannerUtils
 
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rcl_interfaces.msg import SetParametersResult
+
 logger.add("inspection_node_loguru.log")
 
 
@@ -58,11 +61,62 @@ class InspectionPlannerNode(Node):
         self._last_command_yaw = None
 
         # Main loop timer
-        self.timer = self.create_timer(1.0 / float(self.rate_controller), self._tick)
+
+        # Dedicated callback group so the timer cannot overlap with itself
+        self._tick_group = MutuallyExclusiveCallbackGroup()
+
+        # Create timer using declared param
+        self._make_or_update_timer()
+        self.add_on_set_parameters_callback(self._on_param_change)
+
+        # self.timer = self.create_timer(1.0 / float(self.rate_controller), self._tick)
 
     # -----------------
     # Param helpers
     # -----------------
+    def _make_or_update_timer(self):
+        """Create (or recreate) the tick timer based on current rate_controller."""
+        rate = float(self.get_param('/rate_controller', 5))
+
+        # Clamp to a safe range
+        if rate <= 0.0:
+            logger.warning(f"rate_controller <= 0 ({rate}); clamping to 1.0 Hz")
+            rate = 1.0
+
+        period = 1.0 / rate
+
+        # If timer exists, destroy and recreate (simple + reliable)
+        if hasattr(self, "timer") and self.timer is not None:
+            try:
+                self.timer.cancel()
+                self.destroy_timer(self.timer)
+            except Exception as e:
+                logger.warning(f"Failed to destroy old timer: {e}")
+
+        self.timer = self.create_timer(period, self._tick, callback_group=self._tick_group)
+        self.rate_controller = rate
+        logger.info(f"Tick rate set to {rate:.2f} Hz (period {period:.3f} s)")
+
+    def _on_param_change(self, params):
+        """Allow runtime change of rate_controller."""
+        for p in params:
+            if p.name in ("rate_controller", "/rate_controller"):
+                # accept anything numeric; clamp later
+                try:
+                    _ = float(p.value)
+                except Exception:
+                    return SetParametersResult(successful=False, reason="rate_controller must be numeric")
+
+        # Apply changes after validation
+        result = SetParametersResult(successful=True)
+
+        # Rebuild timer if rate_controller changed
+        for p in params:
+            if p.name == "rate_controller":
+                self._make_or_update_timer()
+
+        return result
+    
     def get_param(self, name: str, default):
         """
         ROS2-safe param getter with ROS1-style key tolerance.
@@ -95,13 +149,13 @@ class InspectionPlannerNode(Node):
         self.world_frame = self.get_param('/world_frame', 'world')
         self.run_mode = self.get_param('/run_mode', 1)
         self.sensor_rot = self.get_param('/sensor_rotation', [0.0, 0.0, 0.0])
-        self.rate_controller = self.get_param('/rate_controller', 5)
+        self.rate_controller = self.get_param('/rate_controller', 1)
 
         ## Store params to feed PlannerCore
 
         self.params = {
             "inspection_distance": float(self.get_param('/inspection_distance', 2.0)),
-            "photogrammetric_params": [float(x) for x in self.get_param('/photogrammetric_params', [0.6, 0.8])],
+            "photogrammetric_params": [float(x) for x in self.get_param('/photogrammetric_params', [0.8, 0.8])],
             "fov": [float(x) for x in self.get_param('/fov', [69.4, 45.0])],
             "platform_modality": int(self.get_param('/platform_modality', 0)),
             "cmd_pos_upd": float(self.get_param('/cmd_pos_upd', 0.2)),
@@ -141,8 +195,8 @@ class InspectionPlannerNode(Node):
 
         # Topic names are params in your YAML; keep identical keys.
         self.odom_topic = self.get_param('/odom_topic', '/husky/odometry/imu')
-        self.pcl_topic = self.get_param('/pcl_topic', '/husky/ouster/points')
-        # self.pcl_topic = self.get_param('/pcl_topic', 'filtered_pointcloud')
+        # self.pcl_topic = self.get_param('/pcl_topic', '/ouster/points')
+        self.pcl_topic = self.get_param('/pcl_topic', '/husky/filtered_pointcloud')
 
         logger.info(f"pcl_topic {self.pcl_topic}")
 
@@ -171,7 +225,7 @@ class InspectionPlannerNode(Node):
         self.path_pub = self.create_publisher(Path, self.tracked_path_topic, qos1)
 
         self.create_subscription(Odometry, self.odom_topic, self.cb_odom, qos1)
-        self.create_subscription(PointCloud2, self.pcl_topic, self.cb_pointcloud, qos1)
+        self.create_subscription(PointCloud2, self.pcl_topic, self.cb_pointcloud, QOS_SENSOR)
 
         # Start service
         self.create_service(Trigger, 'initialize_inspection', self.cb_start)

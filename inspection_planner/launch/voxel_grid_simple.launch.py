@@ -10,49 +10,46 @@ def generate_launch_description():
     robot = LaunchConfiguration('robot')
     frame_id = LaunchConfiguration('frame_id')
 
-    # Sim params (copied from ROS 1 launch)
     sim_pcl = Node(
         package='inspection_planner',
         executable='pcl_transformer',
-        name='pcl_transformer',
+        name='pcl_transformer_sim',
         output='screen',
         parameters=[{
-            'input_pointcloud': '/pelican/velodyne_points',
-            'output_pointcloud': 'filtered_pointcloud',
+            'input_pointcloud': ['/', robot, '/velodyne_points'],
+            'output_pointcloud': ['/', robot,'/filtered_pointcloud'],
             'sensor': 'lidar',
             'frame_id': frame_id,
             'filter_min_x': 0.0,
             'filter_max_x': 10.0,
             'filter_min_y': -10.0,
             'filter_max_y': 10.0,
-            'filter_min_z': -8.0,
-            'filter_max_z': 8.0,
+            'filter_min_z': 0.0,
+            'filter_max_z': 3.0,
         }],
     )
 
-    # Real params (copied from ROS 1 launch)
     real_pcl = Node(
         package='inspection_planner',
         executable='pcl_transformer',
-        name='pcl_transformer',
+        name='pcl_transformer_real',
         output='screen',
         parameters=[{
-            'input_pointcloud': '/spot/ouster/points',
-            'output_pointcloud': '/spot/filtered_pointcloud',
+            'input_pointcloud': ['/', robot, '/ouster/points'],
+            'output_pointcloud': ['/', robot,'/filtered_pointcloud'],
             'sensor': 'lidar',
             'frame_id': frame_id,
-            # Note: original ROS 1 file had max/min swapped for x; kept as-is.
-            'filter_min_x': 10.0,
-            'filter_max_x': -10.0,
+            'filter_min_x': -10.0,
+            'filter_max_x': 10.0,
             'filter_min_y': -10.0,
             'filter_max_y': 0.0,
             'filter_min_z': 0.0,
-            'filter_max_z': 8.0,
+            'filter_max_z': 1.0,
         }],
     )
 
     sim_group = GroupAction(
-        condition=IfCondition(PythonExpression([team, " == 'kSim'"])),
+        condition=IfCondition(PythonExpression(["'", team, "' == 'kSim'"])),
         actions=[
             PushRosNamespace(robot),
             sim_pcl,
@@ -60,7 +57,7 @@ def generate_launch_description():
     )
 
     real_group = GroupAction(
-        condition=IfCondition(PythonExpression([team, " == 'kReal'"])),
+        condition=IfCondition(PythonExpression(["'", team, "' == 'kReal'"])),
         actions=[
             PushRosNamespace(robot),
             real_pcl,

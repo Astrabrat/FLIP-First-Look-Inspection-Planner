@@ -166,7 +166,7 @@ class PlannerCore:
     @logger.catch
     def generateViewPose(self, pos, action, points, pose, pcl_pub_handle):
         cpoints, croppedPointsMsg = PlannerUtils.crop_points_within_fov(points, pose)
-        pcl_pub_handle.publish(croppedPointsMsg)
+        # pcl_pub_handle.publish(croppedPointsMsg)
 
         if len(cpoints) < 2:
             tree = KDTree(points)

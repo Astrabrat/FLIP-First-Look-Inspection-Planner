@@ -37,13 +37,27 @@ public:
     filter_min_x_ = this->declare_or_get_double_("filter_min_x", -50.0);
     filter_max_x_ = this->declare_or_get_double_("filter_max_x",  50.0);
     filter_min_y_ = this->declare_or_get_double_("filter_min_y", -50.0);
-    filter_max_y_ = this->declare_or_get_double_("filter_max_y",  50.0);
-    filter_min_z_ = this->declare_or_get_double_("filter_min_z",  -3.0);
-    filter_max_z_ = this->declare_or_get_double_("filter_max_z",   5.0);
+    filter_max_y_ = this->declare_or_get_double_("filter_max_y",  0.0);
+    filter_min_z_ = this->declare_or_get_double_("filter_min_z",  0.0);
+    filter_max_z_ = this->declare_or_get_double_("filter_max_z",  5.0);
 
     voxel_leaf_x_ = this->declare_or_get_double_("voxel_leaf_x", 0.2);
     voxel_leaf_y_ = this->declare_or_get_double_("voxel_leaf_y", 0.2);
     voxel_leaf_z_ = this->declare_or_get_double_("voxel_leaf_z", 0.2);
+
+    // ---- Print parameters ----
+    RCLCPP_INFO(this->get_logger(),
+        "Filter X: [%.3f, %.3f]", filter_min_x_, filter_max_x_);
+
+    RCLCPP_INFO(this->get_logger(),
+        "Filter Y: [%.3f, %.3f]", filter_min_y_, filter_max_y_);
+
+    RCLCPP_INFO(this->get_logger(),
+        "Filter Z: [%.3f, %.3f]", filter_min_z_, filter_max_z_);
+
+    RCLCPP_INFO(this->get_logger(),
+        "Voxel leaf: [%.3f, %.3f, %.3f]",
+        voxel_leaf_x_, voxel_leaf_y_, voxel_leaf_z_);
 
     auto qos = rclcpp::SensorDataQoS();
 
@@ -120,7 +134,7 @@ private:
 
       // Keep the timeout small like ROS 1 version.
       if (!tf_buffer_.canTransform(target_frame_, msg->header.frame_id, stamp,
-                                   tf2::durationFromSec(0.05))) {
+                                   tf2::durationFromSec(1.0))) {
         RCLCPP_WARN_THROTTLE(
             this->get_logger(), *this->get_clock(), 1000,
             "No transform %s -> %s at cloud time yet.",

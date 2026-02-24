@@ -53,7 +53,6 @@ def generate_launch_description():
     real_group = GroupAction(
         condition=IfCondition(PythonExpression(["'", team, "' == 'kReal'"])),
         actions=[
-            static_tf_real,
             PushRosNamespace(robot),
             planner_node,
         ],

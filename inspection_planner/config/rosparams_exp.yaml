@@ -1,4 +1,4 @@
-/**:
+/inspection_planner_node:
   ros__parameters:
     world_frame: world
     sensor_frame: husky/base_link
@@ -27,7 +27,7 @@
     - 0.0
     - 0.0
     - 0.0
-    rate_controller: 5
+    rate_controller: 1
     max_std_deviation: 1
     adaptive_factor: 0.0
     cmd_pos_upd: 25
@@ -37,14 +37,14 @@
     confidence_horizon: 5
     inspection_distance: 1.5
     photogrammetric_params:
-    - 0.5
+    - 0.8
     - 0.01
     prediction_horizon: 5
     FretD_confidence: 0.5
     inspection_height: 1.0
     odom_topic: odometry/imu
-    # pcl_topic: filtered_pointcloud
-    pcl_topic: ouster/points
+    pcl_topic: filtered_pointcloud
+    # pcl_topic: ouster/points
     imu_topic: imu/data
     sbl_topic: sbl/data
     takeoff_topic: start

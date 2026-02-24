@@ -453,6 +453,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
         # (Optional) publish as PointCloud2
         pcl = PointCloud2()
         pcl.header.frame_id = PlannerUtils._get_param("/world_frame", "world")
+    
         pcl.header.stamp = PlannerUtils._now_msg()
 
         fields = [
