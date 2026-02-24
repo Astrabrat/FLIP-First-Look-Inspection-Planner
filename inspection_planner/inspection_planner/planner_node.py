@@ -44,7 +44,7 @@ class InspectionPlannerNode(Node):
         PlannerUtils.set_node(self)
 
         self.cwd = os.getcwd()
-
+        self.declare_mission_params()
         self.initializeMissionParameters()
         self.initializeROSTopics()
 
@@ -140,39 +140,99 @@ class InspectionPlannerNode(Node):
     # -----------------
     # Initialization
     # -----------------
+
+    def declare_mission_params(self):
+        # Scalars
+        self.declare_parameter('inspection_distance', 2.0)
+        self.declare_parameter('platform_modality', 0)
+        self.declare_parameter('cmd_pos_upd', 0.2)
+        self.declare_parameter('cmd_yaw_upd', 0.05)
+        self.declare_parameter('prediction_horizon', 5)
+        self.declare_parameter('confidence_horizon', 5)
+        self.declare_parameter('min_pts_conf', 10)
+        self.declare_parameter('interpolation_alpha', 0.5)
+        self.declare_parameter('world_frame', 'world')
+        self.declare_parameter('base_link_frame', 'base_link')
+        self.declare_parameter('max_std_deviation', 0.05)
+        self.declare_parameter('run_mode', 0)
+        self.declare_parameter('inspection_height', 1.0)
+
+        # Lists
+        self.declare_parameter('photogrammetric_params', [0.8, 0.8])
+        self.declare_parameter('fov', [69.4, 45.0])
+        self.declare_parameter('sensor_rotation', [0.0, 0.0, 0.0])
+
+        self.declare_parameter('odom_topic', 'odometry/imu')
+        self.declare_parameter('pcl_topic', 'filtered_pointcloud')
+
+        # Outputs
+        self.declare_parameter('maintained_distance', 'inspection_planner/results/maintained_distance')
+        self.declare_parameter('reference_pose', 'command/pose')
+        self.declare_parameter('predicted_path', 'inspection_planner/results/predicted_path')
+        self.declare_parameter('cropped_points', 'inspection_planner/results/cropped_points')
+        self.declare_parameter('inspection_performance', 'inspection_planner/results/inspection_performance')
+        self.declare_parameter('tracked_path', 'inspection_planner/results/tracked_path')
+
     def initializeMissionParameters(self):
 
-        self.desired_viewing_distance = self.get_param('/inspection_distance', 2.0)
-        self.platform_modality = self.get_param('/platform_modality', 0)
-        self.min_pos_upd = self.get_param('/cmd_pos_upd', 0.2)
-        self.min_yaw_upd = self.get_param('/cmd_yaw_upd', 0.05)
-        self.world_frame = self.get_param('/world_frame', 'world')
-        self.run_mode = self.get_param('/run_mode', 1)
-        self.sensor_rot = self.get_param('/sensor_rotation', [0.0, 0.0, 0.0])
-        self.rate_controller = self.get_param('/rate_controller', 1)
+        # self.desired_viewing_distance = self.get_param('/inspection_distance', 2.0)
+        # self.platform_modality = self.get_param('/platform_modality', 0)
+        # self.min_pos_upd = self.get_param('/cmd_pos_upd', 0.2)
+        # self.min_yaw_upd = self.get_param('/cmd_yaw_upd', 0.05)
+        # self.world_frame = self.get_param('/world_frame', 'world')
+        # self.run_mode = self.get_param('/run_mode', 1)
+        # self.sensor_rot = self.get_param('/sensor_rotation', [0.0, 0.0, 0.0])
+        # self.rate_controller = self.get_param('/rate_controller', 1)
 
         ## Store params to feed PlannerCore
 
         self.params = {
-            "inspection_distance": float(self.get_param('/inspection_distance', 2.0)),
-            "photogrammetric_params": [float(x) for x in self.get_param('/photogrammetric_params', [0.8, 0.8])],
-            "fov": [float(x) for x in self.get_param('/fov', [69.4, 45.0])],
-            "platform_modality": int(self.get_param('/platform_modality', 0)),
-            "cmd_pos_upd": float(self.get_param('/cmd_pos_upd', 0.2)),
-            "cmd_yaw_upd": float(self.get_param('/cmd_yaw_upd', 0.05)),
-            "sensor_rotation": [float(x) for x in self.get_param('/sensor_rotation', [0.0, 0.0, 0.0])],
-            "prediction_horizon": max(1, int(self.get_param('/prediction_horizon', 5))),
-            "confidence_horizon": max(1, int(self.get_param('/confidence_horizon', 5))),
-            "min_pts_conf": int(self.get_param('/min_pts_conf', 10)),
-            "interpolation_alpha": float(self.get_param('/interpolation_alpha', 0.5)),
-            "world_frame": str(self.get_param('/world_frame', 'world')),
-            "base_link_frame": str(self.get_param('/base_link_frame', 'base_link')),
-            "max_std_deviation": float(self.get_param('/max_std_deviation', 0.05)),
-            "run_mode": int(self.get_param('/run_mode', 0)),
-            "inspection_height": float(self.get_param('/inspection_height', 1.0)),
+            "inspection_distance": float(self.get_parameter('inspection_distance').value),
+
+            "photogrammetric_params": [
+                float(x) for x in self.get_parameter('photogrammetric_params').value
+            ],
+
+            "fov": [
+                float(x) for x in self.get_parameter('fov').value
+            ],
+
+            "platform_modality": int(self.get_parameter('platform_modality').value),
+
+            "cmd_pos_upd": float(self.get_parameter('cmd_pos_upd').value),
+            "cmd_yaw_upd": float(self.get_parameter('cmd_yaw_upd').value),
+
+            "sensor_rotation": [
+                float(x) for x in self.get_parameter('sensor_rotation').value
+            ],
+
+            "prediction_horizon": max(1, int(self.get_parameter('prediction_horizon').value)),
+            "confidence_horizon": max(1, int(self.get_parameter('confidence_horizon').value)),
+            "min_pts_conf": int(self.get_parameter('min_pts_conf').value),
+
+            "interpolation_alpha": float(self.get_parameter('interpolation_alpha').value),
+
+            "world_frame": str(self.get_parameter('world_frame').value),
+            "base_link_frame": str(self.get_parameter('base_link_frame').value),
+
+            "max_std_deviation": float(self.get_parameter('max_std_deviation').value),
+            "run_mode": int(self.get_parameter('run_mode').value),
+            "inspection_height": float(self.get_parameter('inspection_height').value),
         }
 
+        # convenience mirrors (optional)
+        self.desired_viewing_distance = self.params["inspection_distance"]
+        self.platform_modality = self.params["platform_modality"]
+        self.min_pos_upd = self.params["cmd_pos_upd"]
+        self.min_yaw_upd = self.params["cmd_yaw_upd"]
+        self.sensor_rot = self.params["sensor_rotation"]
+        self.world_frame = self.params["world_frame"]
+        self.run_mode = self.params["run_mode"]
+        self.rate_controller = int(self.get_parameter('rate_controller').value) if self.has_parameter('rate_controller') else 5
+
         logger.info(f"prediction_horizon: {self.params['prediction_horizon']}")
+        logger.info("Successfully loaded parameters")
+
         
 
         self.res_start = False
@@ -189,30 +249,27 @@ class InspectionPlannerNode(Node):
         self.raw_pts = None
         self.res_start = True
 
-        logger.info("Successfully loaded parameters")
 
     def initializeROSTopics(self):
 
-        # Topic names are params in your YAML; keep identical keys.
-        self.odom_topic = self.get_param('/odom_topic', '/husky/odometry/imu')
-        # self.pcl_topic = self.get_param('/pcl_topic', '/ouster/points')
-        self.pcl_topic = self.get_param('/pcl_topic', '/husky/filtered_pointcloud')
+        self.odom_topic = str(self.get_parameter('odom_topic').value)
+        self.pcl_topic  = str(self.get_parameter('pcl_topic').value)
 
-        logger.info(f"pcl_topic {self.pcl_topic}")
+        logger.info(f"odom_topic: {self.odom_topic}")
+        logger.info(f"pcl_topic:  {self.pcl_topic}")
 
-        self.inspDist_topic = self.get_param('/maintained_distance', 'inspection_planner/results/maintained_distance')
-        self.reference_pose_topic = self.get_param('/reference_pose', 'command/pose')
-        predictedPath_topic_param = self.get_param('/predicted_path', 'inspection_planner/results/predicted_path')
+        # Outputs
+        self.inspDist_topic = str(self.get_parameter('maintained_distance').value)
+        self.reference_pose_topic = str(self.get_parameter('reference_pose').value)
+        predictedPath_topic_param = str(self.get_parameter('predicted_path').value)
+        self.croppedPoints_topic = str(self.get_parameter('cropped_points').value)
+        self.inspection_performance_topic = str(self.get_parameter('inspection_performance').value)
+        self.tracked_path_topic = str(self.get_parameter('tracked_path').value)
 
-        self.croppedPoints_topic = self.get_param('/cropped_points', 'inspection_planner/results/cropped_points')
+        # Keep run_mode consistent (already declared in mission params)
+        self.run_mode = int(self.get_parameter('run_mode').value)
 
-        self.inspection_performance_topic = self.get_param(
-            '/inspection_performance',
-            'inspection_planner/results/inspection_performance',
-        )
-        self.tracked_path_topic = self.get_param('/tracked_path', 'inspection_planner/results/tracked_path')
-
-        self.run_mode = self.get_param('/run_mode', self.run_mode)
+        logger.info("Successfully loaded topics")
 
         qos1 = QoSProfile(depth=1)
 

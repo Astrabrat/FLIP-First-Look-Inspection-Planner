@@ -1,4 +1,4 @@
-planner_node:
+/inspection_planner_node::
   ros__parameters:
     world_frame: world
     sensor_frame: realsense

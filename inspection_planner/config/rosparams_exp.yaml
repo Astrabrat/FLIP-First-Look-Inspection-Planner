@@ -1,4 +1,4 @@
-/inspection_planner_node:
+inspection_planner_node:
   ros__parameters:
     world_frame: world
     sensor_frame: husky/base_link
@@ -39,7 +39,7 @@
     photogrammetric_params:
     - 0.8
     - 0.01
-    prediction_horizon: 5
+    prediction_horizon: 50
     FretD_confidence: 0.5
     inspection_height: 1.0
     odom_topic: odometry/imu
