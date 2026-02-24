@@ -134,7 +134,7 @@ private:
 
       // Keep the timeout small like ROS 1 version.
       if (!tf_buffer_.canTransform(target_frame_, msg->header.frame_id, stamp,
-                                   tf2::durationFromSec(1.0))) {
+                                   tf2::durationFromSec(0.1))) {
         RCLCPP_WARN_THROTTLE(
             this->get_logger(), *this->get_clock(), 1000,
             "No transform %s -> %s at cloud time yet.",
