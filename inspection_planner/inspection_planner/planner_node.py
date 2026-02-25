@@ -13,6 +13,7 @@ from inspection_planner.utils import PlannerUtils
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rcl_interfaces.msg import SetParametersResult
 
+
 logger.add("inspection_node_loguru.log")
 
 
@@ -37,13 +38,10 @@ class InspectionPlannerNode(Node):
     def __init__(self):
         super().__init__(
             'inspection_planner_node',
-            allow_undeclared_parameters=True,
-            automatically_declare_parameters_from_overrides=True,
         )
 
         PlannerUtils.set_node(self)
 
-        self.cwd = os.getcwd()
         self.declare_mission_params()
         self.initializeMissionParameters()
         self.initializeROSTopics()
@@ -156,14 +154,15 @@ class InspectionPlannerNode(Node):
         self.declare_parameter('max_std_deviation', 0.05)
         self.declare_parameter('run_mode', 0)
         self.declare_parameter('inspection_height', 1.0)
+        self.declare_parameter('rate_controller', 1.0)
 
         # Lists
         self.declare_parameter('photogrammetric_params', [0.8, 0.8])
         self.declare_parameter('fov', [69.4, 45.0])
         self.declare_parameter('sensor_rotation', [0.0, 0.0, 0.0])
 
-        self.declare_parameter('odom_topic', 'odometry/imu')
-        self.declare_parameter('pcl_topic', 'filtered_pointcloud')
+        self.declare_parameter('odom_topic', '/husky/odometry/imu')
+        self.declare_parameter('pcl_topic', '/husky/filtered_pointcloud')
 
         # Outputs
         self.declare_parameter('maintained_distance', 'inspection_planner/results/maintained_distance')
@@ -172,6 +171,8 @@ class InspectionPlannerNode(Node):
         self.declare_parameter('cropped_points', 'inspection_planner/results/cropped_points')
         self.declare_parameter('inspection_performance', 'inspection_planner/results/inspection_performance')
         self.declare_parameter('tracked_path', 'inspection_planner/results/tracked_path')
+
+        logger.info('All params declared')
 
     def initializeMissionParameters(self):
 
@@ -291,11 +292,11 @@ class InspectionPlannerNode(Node):
         self.cbfPolicy = self.create_client(Trigger, 'cbf_input')
 
         # ROS 1 code blocked until first messages arrived; emulate that here.
-        self._wait_for_initial_messages(timeout_sec=10.0)
+        self._wait_for_initial_messages(timeout_sec=5.0)
 
         logger.info("Successfully loaded topics")
 
-    def _wait_for_initial_messages(self, timeout_sec: float = 10.0):
+    def _wait_for_initial_messages(self, timeout_sec: float = 5.0):
         t0 = time.time()
         while rclpy.ok() and (not self._have_odom or not self._have_pcl):
             rclpy.spin_once(self, timeout_sec=0.1)
@@ -422,7 +423,8 @@ class InspectionPlannerNode(Node):
         insp_perf.maintained_distance.data = float(nmla_info)
 
         # Keep distance live-updated as ROS 1 did.
-        self.desired_viewing_distance = self.get_param('/inspection_distance', 2.0)
+        self.desired_viewing_distance = float(self.get_parameter('inspection_distance').value)
+        
         insp_perf.desired_distance.data = float(self.desired_viewing_distance)
 
         self.pub_insp_performance.publish(insp_perf)
@@ -510,23 +512,26 @@ class InspectionPlannerNode(Node):
         if self._last_command_pos is None:
             return
 
-        # if not self.thresholdCheck(self._last_command_pos.copy(), self._last_command_yaw):
-        #     try:
-        #         self._last_pred_path, self._last_pred_refpose, self._last_command_yaw = self.updateYaw(
-        #             self._last_pred_path,
-        #             self.pub_cropped_points,
-        #         )
-        #         self.pub_predPath.publish(self._last_pred_path)
+        if self.run_mode == 1:
+            if not self.thresholdCheck(self._last_command_pos.copy(), self._last_command_yaw):
+                try:
+                    self._last_pred_path, self._last_pred_refpose, self._last_command_yaw = self.updateYaw(
+                        self._last_pred_path,
+                        self.pub_cropped_points,
+                    )
+                    self.pub_predPath.publish(self._last_pred_path)
 
-        #         if self.sensor_rot[2] != 0:
-        #             self.modifyReferenceYaw(self._last_pred_refpose, self.sensor_rot[2])
-        #         else:
-        #             self.pub_refPose.publish(self._last_pred_refpose)
-        #     except Exception as e:
-        #         logger.warning(f"updateYaw failed: {e}")
-        # else:
-            # Inner loop in ROS 1 finished -> allow replanning next tick.
-        self._have_pred = False
+                    if self.sensor_rot[2] != 0:
+                        self.modifyReferenceYaw(self._last_pred_refpose, self.sensor_rot[2])
+                    else:
+                        self.pub_refPose.publish(self._last_pred_refpose)
+                except Exception as e:
+                    logger.warning(f"updateYaw failed: {e}")
+            else:
+                # Inner loop in ROS 1 finished -> allow replanning next tick.
+                self._have_pred = False
+        else:
+            self._have_pred = False
 
 
 def main(args=None):

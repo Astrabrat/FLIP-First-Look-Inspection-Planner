@@ -46,13 +46,7 @@ def generate_launch_description():
         name='inspection_planner_node',
         output='screen',
         # Pick param file based on team (works correctly; outputs a *string path*)
-        parameters=[LaunchConfiguration(
-            PythonExpression([
-                "'", '/home/r2d2/colcon_workspaces/inspection_ws/src/FLIP-First-Look-Inspection-Planner/inspection_planner/config/rosparams_exp.yaml', "' if '", team, "' == 'kReal' else '", '/home/r2d2/colcon_workspaces/inspection_ws/src/FLIP-First-Look-Inspection-Planner/inspection_planner/config/rosparams_sims.yaml', "'"
-            ])
-        )],
-        # If you want to force using the source YAML while developing, replace the above with:
-        # parameters=['/home/r2d2/colcon_workspaces/inspection_ws/src/FLIP-First-Look-Inspection-Planner/inspection_planner/config/rosparams_exp.yaml'],
+        parameters=[params_exp],
     )
 
     # --- Namespaced groups ---

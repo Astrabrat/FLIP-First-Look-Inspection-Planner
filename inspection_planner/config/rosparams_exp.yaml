@@ -1,8 +1,9 @@
-inspection_planner_node:
+/**:
   ros__parameters:
-    world_frame: world
-    sensor_frame: husky/base_link
-    base_link_frame: husky/base_link
+    name: 'husky'
+    world_frame: 'world'
+    sensor_frame: 'husky/base_link'
+    base_link_frame: 'husky/base_link'
     platform_modality: 0
     run_mode: 1
     sensor_modality: 0
@@ -27,10 +28,10 @@ inspection_planner_node:
     - 0.0
     - 0.0
     - 0.0
-    rate_controller: 1
-    max_std_deviation: 1
+    rate_controller: 1.0
+    max_std_deviation: 1.0
     adaptive_factor: 0.0
-    cmd_pos_upd: 25
+    cmd_pos_upd: 25.0
     cmd_yaw_upd: 3.14
     min_pts_conf: 5
     interpolation_alpha: 0.4
