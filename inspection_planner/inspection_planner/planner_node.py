@@ -163,6 +163,7 @@ class InspectionPlannerNode(Node):
 
         self.declare_parameter('odom_topic', 'odometry/imu')
         self.declare_parameter('pcl_topic', 'filtered_pointcloud')
+        self.declare_parameter('sbl_topic', 'sbl/data')
 
         # Outputs
         self.declare_parameter('maintained_distance', 'inspection_planner/results/maintained_distance')
@@ -229,7 +230,7 @@ class InspectionPlannerNode(Node):
         self.sensor_rot = self.params["sensor_rotation"]
         self.world_frame = self.params["world_frame"]
         self.run_mode = self.params["run_mode"]
-        self.inspection_height = self.parms["inspection_height"]
+        self.inspection_height = self.params["inspection_height"]
         self.rate_controller = int(self.get_parameter('rate_controller').value) if self.has_parameter('rate_controller') else 5
 
         logger.info(f"prediction_horizon: {self.params['prediction_horizon']}")
