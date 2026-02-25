@@ -161,8 +161,8 @@ class InspectionPlannerNode(Node):
         self.declare_parameter('fov', [69.4, 45.0])
         self.declare_parameter('sensor_rotation', [0.0, 0.0, 0.0])
 
-        self.declare_parameter('odom_topic', '/husky/odometry/imu')
-        self.declare_parameter('pcl_topic', '/husky/filtered_pointcloud')
+        self.declare_parameter('odom_topic', 'odometry/imu')
+        self.declare_parameter('pcl_topic', 'filtered_pointcloud')
 
         # Outputs
         self.declare_parameter('maintained_distance', 'inspection_planner/results/maintained_distance')
@@ -229,6 +229,7 @@ class InspectionPlannerNode(Node):
         self.sensor_rot = self.params["sensor_rotation"]
         self.world_frame = self.params["world_frame"]
         self.run_mode = self.params["run_mode"]
+        self.inspection_height = self.parms["inspection_height"]
         self.rate_controller = int(self.get_parameter('rate_controller').value) if self.has_parameter('rate_controller') else 5
 
         logger.info(f"prediction_horizon: {self.params['prediction_horizon']}")
@@ -255,6 +256,7 @@ class InspectionPlannerNode(Node):
 
         self.odom_topic = str(self.get_parameter('odom_topic').value)
         self.pcl_topic  = str(self.get_parameter('pcl_topic').value)
+        self.sbl_topic = str(self.get_parameter('sbl_topic').value)
 
         logger.info(f"odom_topic: {self.odom_topic}")
         logger.info(f"pcl_topic:  {self.pcl_topic}")
@@ -282,8 +284,9 @@ class InspectionPlannerNode(Node):
         self.pub_insp_performance = self.create_publisher(InspectionPerformance, self.inspection_performance_topic, qos1)
         self.path_pub = self.create_publisher(Path, self.tracked_path_topic, qos1)
 
-        self.create_subscription(Odometry, self.odom_topic, self.cb_odom, qos1)
+        self.create_subscription(Odometry, self.odom_topic, self.cb_odom, QOS_SENSOR)
         self.create_subscription(PointCloud2, self.pcl_topic, self.cb_pointcloud, QOS_SENSOR)
+        self.create_subscription(Float64, self.sbl_topic, self.cb_sbl, QOS_SENSOR)
 
         # Start service
         self.create_service(Trigger, 'initialize_inspection', self.cb_start)
@@ -311,6 +314,11 @@ class InspectionPlannerNode(Node):
     # -----------------
     # ROS callbacks
     # -----------------
+
+    def cb_sbl(self, msg: Float64):
+
+        self.pz = msg.data
+
     def cb_start(self, request, response):
         self.res_start = True
         response.success = True
@@ -336,7 +344,7 @@ class InspectionPlannerNode(Node):
         [r, p, yaw] = PlannerUtils.quat2eul(qx, qy, qz, qw)
 
         self.curr_yaw = yaw
-        self.odom_pose = np.array([px, py, pz, qx, qy, qz, qw])
+        self.odom_pose = np.array([px, py, self.pz, qx, qy, qz, qw])
         self._have_odom = True
 
     # -----------------
@@ -358,8 +366,11 @@ class InspectionPlannerNode(Node):
         return pred_path, predPathArray, refPose, cpos, cyaw
 
     def thresholdCheck(self, pose, yaw=None):
-        if self.platform_modality == 0:
+
+        if self.platform_modality == 0: #ground robot
             pose[2] = self.odom_pose[2]
+        elif self.platform_modality == 1: #aerial robot
+            pose[2] =  self.inspection_height
 
         if yaw is not None:
             if self.sensor_rot[2] != 0.0:

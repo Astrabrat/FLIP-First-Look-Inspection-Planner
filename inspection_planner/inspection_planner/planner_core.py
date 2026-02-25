@@ -272,7 +272,10 @@ class PlannerCore:
             
             pred_pose.pose.position.x = command_pos[0]
             pred_pose.pose.position.y = command_pos[1]
-            pred_pose.pose.position.z = odom_pose[2]
+            if self.platform_modality == 0: #ground robot
+                pred_pose.pose.position.z = odom_pose[2]
+            elif self.platform_modality == 1: #aerial robot
+                pred_pose.pose.position.z = self.insp_height
             
             pred_pose.pose.orientation.x = cqx
             pred_pose.pose.orientation.y = cqy
@@ -287,7 +290,12 @@ class PlannerCore:
 
             # Save initial reference pose
             if k == 0:
-                command_pos[2] = odom_pose[2]
+
+                if self.platform_modality == 0: #ground robot
+                    command_pos[2] = odom_pose[2]
+                elif self.platform_modality == 1: #aerial robot
+                    command_pos[2] = self.insp_height
+
                 cpos = command_pos
                 cyaw = command_yaw
                 refPose = pred_pose
@@ -299,8 +307,6 @@ class PlannerCore:
             # Update predicted position for the next iteration
             pred_pos = command_pos
             
-            # input()
-
         # Finalize predicted path
         pred_path.header.frame_id = self.world_frame
         pred_path.header.stamp = self._now_msg()

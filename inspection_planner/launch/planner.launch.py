@@ -13,7 +13,7 @@ def generate_launch_description():
 
     pkg_share = get_package_share_directory('inspection_planner')
     params_sims = os.path.join(pkg_share, 'config', 'rosparams_sims.yaml')
-    params_exp  = os.path.join(pkg_share, 'config', 'rosparams_exp.yaml')
+    params_exp  = os.path.join(pkg_share, 'config', 'rosparams_shafter.yaml')
 
     # --- Static TF publishers ---
     # NOTE: If you push namespace, these frame names should usually be relative (no leading '/')
@@ -70,7 +70,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         DeclareLaunchArgument('team', default_value='kReal', description="kReal or kSim"),
-        DeclareLaunchArgument('robot', default_value='husky', description="robot namespace"),
+        DeclareLaunchArgument('robot', default_value='shafter', description="robot namespace"),
         sim_group,
         real_group,
     ])
