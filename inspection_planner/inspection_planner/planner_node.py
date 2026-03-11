@@ -345,7 +345,11 @@ class InspectionPlannerNode(Node):
         [r, p, yaw] = PlannerUtils.quat2eul(qx, qy, qz, qw)
 
         self.curr_yaw = yaw
-        self.odom_pose = np.array([px, py, self.pz, qx, qy, qz, qw])
+        if self.platform_modality == 1:
+            self.odom_pose = np.array([px, py, self.pz, qx, qy, qz, qw])
+        else:
+            self.odom_pose = np.array([px, py, pz, qx, qy, qz, qw])
+            
         self._have_odom = True
 
     # -----------------

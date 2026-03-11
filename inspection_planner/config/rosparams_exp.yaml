@@ -5,7 +5,7 @@
     sensor_frame: 'husky/base_link'
     base_link_frame: 'husky/base_link'
     platform_modality: 0
-    run_mode: 1
+    run_mode: 0
     sensor_modality: 0
     max_sensor_range: 10
     min_sensor_range: 0.5
@@ -40,7 +40,7 @@
     photogrammetric_params:
     - 0.8
     - 0.01
-    prediction_horizon: 50
+    prediction_horizon: 10
     FretD_confidence: 0.5
     inspection_height: 1.0
     odom_topic: odometry/imu

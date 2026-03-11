@@ -441,9 +441,9 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
 
         # dot with x-axis == vhat[:,0]
         if increment_fov:
-            cos_thresh = np.cos(np.deg2rad(30))
+            cos_thresh = np.cos(np.deg2rad(60))
         else:
-            cos_thresh = np.cos(np.deg2rad(30))
+            cos_thresh = np.cos(np.deg2rad(60))
         # clip for safety if you later use arccos (here we don't need arccos)
         dots = np.clip(vhat[:, 0], -1.0, 1.0)
 
