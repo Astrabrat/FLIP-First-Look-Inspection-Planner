@@ -19,8 +19,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-rqt \
     ros-humble-rqt-common-plugins \
     ros-humble-tf2-tools \
-
  && rm -rf /var/lib/apt/lists/*
+
+RUN pip3 install loguru \
+    ttictoc
 
 # rosdep init/update (safe to run even if already initialized)
 RUN rosdep init || true && rosdep update
