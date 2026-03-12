@@ -26,7 +26,7 @@ def generate_launch_description():
         # world -> <robot>/odom (robot resolved by GroupAction namespace push)
         # With PushRosNamespace(robot), you typically want frames WITHOUT the robot prefix:
         # e.g. 'odom' not 'pelican/odom'
-        arguments=['0', '0', '0', '0', '0', '0', 'world', 'odom'],
+        arguments=['0', '0', '0', '0', '0', '0', 'odom', 'world'],
     )
 
     static_tf_real = Node(
@@ -34,7 +34,7 @@ def generate_launch_description():
         executable='static_transform_publisher',
         name='static_tf_publisher',
         output='screen',
-        arguments=['0', '0', '0', '0', '0', '0', 'world', 'odom'],
+        arguments=['0', '0', '0', '0', '0', '0', 'odom', 'world'],
     )
 
     # --- Planner node ---

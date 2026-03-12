@@ -159,7 +159,7 @@ class SensorModel():
         return [right_face_vertex_list,left_face_vertex_list,top_face_vertex_list,bottom_face_vertex_list]
 
 
-class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator):
+class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel):
 
     # Optional ROS 2 node handle for parameter/time access.
     # This keeps the rest of the code very close to the ROS 1 version.
