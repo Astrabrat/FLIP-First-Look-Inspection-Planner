@@ -1,6 +1,6 @@
 # FLIP-First-Look-Inspection-Planner
-![alt text](assets/image_1.png)
-![alt text](assets/image_2.png)
+![alt text](assets/image_1.webp)
+![alt text](assets/image_2.webp)
 
 **A Reactive View Planner For Mobile Robots**
 
@@ -22,3 +22,6 @@ Kindly cite the following paper if you find the codebase useful for your work.
   url          = {https://urn.kb.se/resolve?urn=urn:nbn:se:ltu:diva-116469}
 }
 ```
+**Deployment Instructions**
+
+To be updated soon !<>
