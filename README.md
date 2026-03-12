@@ -1,6 +1,7 @@
 # FLIP-First-Look-Inspection-Planner
 ![alt text](assets/image_1.webp)
 ![alt text](assets/image_2.webp)
+![alt text](assets/image_3.webp)
 
 **A Reactive View Planner For Mobile Robots**
 
