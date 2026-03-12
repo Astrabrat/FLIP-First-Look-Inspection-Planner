@@ -158,7 +158,6 @@ class SensorModel():
 
         return [right_face_vertex_list,left_face_vertex_list,top_face_vertex_list,bottom_face_vertex_list]
 
-
 class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel):
 
     # Optional ROS 2 node handle for parameter/time access.
@@ -194,70 +193,120 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
         if cls._node is None:
             return rclpy.clock.Clock().now().to_msg()
         return cls._node.get_clock().now().to_msg()
-    
     class LoadSensorParams:
-        
+
         def __init__(self):
-            
+
             ns_ = PlannerUtils._get_param("/robot_namespace", "")
             sensor_type = PlannerUtils._get_param("/sensor_modality", 0)
-            fov = PlannerUtils._get_param("/fov", [69.4, 45])
-            ar = PlannerUtils._get_param("/aspect_ratio", 1.33)
-            sensor_range = PlannerUtils._get_param("/sensor_range", [0.3, 10.0])
-            
-            if sensor_type == 0 : # For camera
-                
+            fov = PlannerUtils._get_param("/fov", [69.4, 45])           # degrees
+            ar = PlannerUtils._get_param("/aspect_ratio", 1.33)         # width / height
+            sensor_range = PlannerUtils._get_param("/inspection_distance", 2.0)
+
+            if sensor_type == 0:  # camera
+
                 rot_params = PlannerUtils._get_param("/rotation", [0.0, 0.0, 0.0])
-                rot_euler = np.array([rot_params[0],rot_params[1],rot_params[2]])
-                rot_B2S = R.from_euler("XYZ",rot_euler,degrees=False)
-            
-                ## define unit vectors<
-                
-                up = np.array([0,0,1])
-                forward = np.array([1,0,0])
-                right = np.array([0,1,0])
-                
-            ## create3DViewFrustumGeometry
-            
+                rot_euler = np.array([rot_params[0], rot_params[1], rot_params[2]])
+
+                # --- IMPORTANT ---
+                # If your /rotation param is in degrees (typical), set degrees=True.
+                # If it's in radians, set degrees=False.
+                # Pick the one matching the params you feed in.
+                self.rot_sensor_to_body = R.from_euler("XYZ", rot_euler, degrees=True)
+
+                # define unit vectors in the sensor frame (sensor-forward = +X)
+                up = np.array([0.0, 0.0, 1.0])
+                forward = np.array([1.0, 0.0, 0.0])
+                right = np.array([0.0, 1.0, 0.0])
+
+            # frustum endpoints (sensor frame) and body frame
             self.frustum_endpoints_sensor = []
             self.frustum_endpoints_body = []
-            
-            center = np.array([0.0,0.0,0.0])
-            wfar = 2 * np.tan(np.deg2rad(fov[0])/2) * sensor_range[1]
-    
-            hfar = wfar/ar
-        
-            farCenter = center + forward*sensor_range[1]  
-    
-            epTL = farCenter + (np.dot(right,(wfar/2))) + (np.dot(up,(hfar/2)))
-            epTR = farCenter - (np.dot(right,(wfar/2))) + (np.dot(up,(hfar/2)))
-            epBR = farCenter - (np.dot(right,(wfar/2))) - (np.dot(up,(hfar/2)))
-            epBL = farCenter + (np.dot(right,(wfar/2))) - (np.dot(up,(hfar/2)))
-            
-            self.frustum_endpoints_sensor = np.array([epTL,epTR,epBR,epBL])
-            
-            # rospy.loginfo("sensor EP: {}".format(self.frustum_endpoints_sensor))
-            
+
+            center = np.array([0.0, 0.0, 0.0])
+
+            # horizontal FOV is fov[0] degrees => compute width at far plane
+            wfar = 2.0 * np.tan(np.deg2rad(fov[0]) / 2.0) * sensor_range[1]
+            # height from aspect ratio width/height
+            hfar = wfar / ar
+
+            # far plane center (in sensor frame, forward axis)
+            farCenter = center + forward * sensor_range[1]
+
+            # compute corners on far plane (sensor coordinates)
+            epTL = farCenter + right * (wfar / 2.0) + up * (hfar / 2.0)
+            epTR = farCenter - right * (wfar / 2.0) + up * (hfar / 2.0)
+            epBR = farCenter - right * (wfar / 2.0) - up * (hfar / 2.0)
+            epBL = farCenter + right * (wfar / 2.0) - up * (hfar / 2.0)
+
+            self.frustum_endpoints_sensor = np.array([epTL, epTR, epBR, epBL])
+
+            # transform sensor-frame corners into body frame
+            R_s2b = self.rot_sensor_to_body.as_matrix()
             for vertex in self.frustum_endpoints_sensor:
-                
-                self.frustum_endpoints_body.append(rot_B2S.as_matrix()@vertex)
-                
-            # rospy.loginfo("body EP: {}".format(self.frustum_endpoints_body))
-            
-        def getFrustomEndpoints_W2B(self,world_state):
-            
-            world_pos = world_state[0:3]
-            
-            rot_W2B = R.from_euler("XYZ",np.array([0.0,0.0,world_state[3]]),degrees=False)
-            
+                self.frustum_endpoints_body.append(R_s2b @ vertex)
+
+            # make sure stored as numpy arrays
+            self.frustum_endpoints_body = [np.asarray(v) for v in self.frustum_endpoints_body]
+
+        def getFrustumEndpoints_W2B(self, world_state):
+
+            world_pos = np.asarray(world_state[0:3])
+            r,p,yaw = PlannerUtils.quat2eul(world_state[3],world_state[4],world_state[5],world_state[6])
+
+            # rotation from world -> body (constructed from yaw)
+            rot_W2B = R.from_euler("XYZ", np.array([0.0, 0.0, yaw]), degrees=False)
+            R_w2b = rot_W2B.as_matrix()
+
             frustum_endpoints_world = []
-            
-            for vertex in self.frustum_endpoints_body:
-                
-                frustum_endpoints_world.append(world_pos + rot_W2B.as_matrix()*vertex)
-            
+            for vertex_body in self.frustum_endpoints_body:
+                # transform body-frame vertex to world: world_pos + R_w2b @ vertex_body
+                frustum_endpoints_world.append(world_pos + (R_w2b @ vertex_body))
+
             return frustum_endpoints_world
-        
+
+        def get_frustum(self, odom_state, rot, trans,counter):
+
+            # get corners (list of 4 points: TL,TR,BR,BL) in world coords
+            frustum_corners = self.getFrustumEndpoints_W2B(odom_state)
+            # frustum_corners =  self.frustum_endpoints_body
+
+            # camera origin (world coords). If your camera has an offset from the body origin,
+            # ensure `trans` already encodes that (in world frame).
+            origin = odom_state[0:3]
+            # origin = trans
+
+            # --- Wireframe marker: LINE_LIST ---
+            m = Marker()
+            m.header.frame_id = PlannerUtils._get_param("/sensor_frame", "husky/base_link")
+            m.ns = "camera_frustum"
+            m.id = counter
+            m.type = Marker.LINE_LIST
+            m.action = Marker.ADD
+            m.scale.x = 0.02  # line width in meters
+            m.color = ColorRGBA()
+            m.color.r = 0.0
+            m.color.g = 1.0
+            m.color.b = 0.0
+            m.color.a = 1.0
+
+            # ensure corners are numpy arrays
+            corners = [np.asarray(c) for c in frustum_corners]  # TL, TR, BR, BL
+
+            # lines from origin to each corner
+            for c in corners:
+                m.points.append(PlannerUtils.getPointMsg(origin[0], origin[1], origin[2]))
+                m.points.append(PlannerUtils.getPointMsg(float(c[0]), float(c[1]), float(c[2])))
+
+            # lines around the far plane (TL->TR, TR->BR, BR->BL, BL->TL)
+            for i in range(4):
+                a = corners[i]
+                b = corners[(i + 1) % 4]
+                m.points.append(PlannerUtils.getPointMsg(float(a[0]), float(a[1]), float(a[2])))
+                m.points.append(PlannerUtils.getPointMsg(float(b[0]), float(b[1]), float(b[2])))
+
+            return m
+    
     def GetRotmat_B2W(world_state):
 
         roll, pitch, yaw = PlannerUtils.quat2eul(world_state[3], world_state[4], world_state[5], world_state[6])

@@ -48,6 +48,7 @@ from std_msgs.msg import (
     Header,
     MultiArrayDimension,
     String,
+    ColorRGBA,
 )
 from std_srvs.srv import Trigger
 from visualization_msgs.msg import Marker, MarkerArray

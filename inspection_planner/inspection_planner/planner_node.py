@@ -22,18 +22,6 @@ def _strip_leading_slash(name: str) -> str:
 
 
 class InspectionPlannerNode(Node):
-    """ROS 2 port of the ROS 1 `planner_node.py`.
-
-    Key behavioral intent (kept):
-    - Subscribe to odometry + pointcloud.
-    - Wait for first messages before starting.
-    - Provide Trigger service `initialize_inspection` to start planning.
-    - Publish predicted path, reference pose, cropped points, and performance.
-
-    Key architectural change (ROS 2 requirement):
-    - Replace blocking nested while-loops with a timer-driven state machine so
-      the executor can continue processing incoming messages.
-    """
 
     def __init__(self):
         super().__init__(
@@ -41,6 +29,8 @@ class InspectionPlannerNode(Node):
         )
 
         PlannerUtils.set_node(self)
+
+        self.sensor = PlannerUtils.LoadSensorParams()
 
         self.declare_mission_params()
         self.initializeMissionParameters()
@@ -160,6 +150,7 @@ class InspectionPlannerNode(Node):
         self.declare_parameter('photogrammetric_params', [0.8, 0.8])
         self.declare_parameter('fov', [69.4, 45.0])
         self.declare_parameter('sensor_rotation', [0.0, 0.0, 0.0])
+        self.declare_parameter('sensor_translation', [0.0, 0.0, 0.0])
 
         self.declare_parameter('odom_topic', 'odometry/imu')
         self.declare_parameter('pcl_topic', 'filtered_pointcloud')
@@ -172,6 +163,7 @@ class InspectionPlannerNode(Node):
         self.declare_parameter('cropped_points', 'inspection_planner/results/cropped_points')
         self.declare_parameter('inspection_performance', 'inspection_planner/results/inspection_performance')
         self.declare_parameter('tracked_path', 'inspection_planner/results/tracked_path')
+        self.declare_parameter('cam_frustum', 'inspection_planner/general/camera_frustum')
 
         logger.info('All params declared')
 
@@ -207,6 +199,9 @@ class InspectionPlannerNode(Node):
             "sensor_rotation": [
                 float(x) for x in self.get_parameter('sensor_rotation').value
             ],
+            "sensor_translation": [
+                float(x) for x in self.get_parameter('sensor_translation').value
+            ],
 
             "prediction_horizon": max(1, int(self.get_parameter('prediction_horizon').value)),
             "confidence_horizon": max(1, int(self.get_parameter('confidence_horizon').value)),
@@ -228,6 +223,7 @@ class InspectionPlannerNode(Node):
         self.min_pos_upd = self.params["cmd_pos_upd"]
         self.min_yaw_upd = self.params["cmd_yaw_upd"]
         self.sensor_rot = self.params["sensor_rotation"]
+        self.sensor_trans = self.params["sensor_translation"]
         self.world_frame = self.params["world_frame"]
         self.run_mode = self.params["run_mode"]
         self.inspection_height = self.params["inspection_height"]
@@ -269,6 +265,7 @@ class InspectionPlannerNode(Node):
         self.croppedPoints_topic = str(self.get_parameter('cropped_points').value)
         self.inspection_performance_topic = str(self.get_parameter('inspection_performance').value)
         self.tracked_path_topic = str(self.get_parameter('tracked_path').value)
+        self.cam_frustum_topic = str(self.get_parameter('cam_frustum').value)
 
         # Keep run_mode consistent (already declared in mission params)
         self.run_mode = int(self.get_parameter('run_mode').value)
@@ -284,6 +281,7 @@ class InspectionPlannerNode(Node):
 
         self.pub_insp_performance = self.create_publisher(InspectionPerformance, self.inspection_performance_topic, qos1)
         self.path_pub = self.create_publisher(Path, self.tracked_path_topic, qos1)
+        self.pub_frustum = self.create_publisher(MarkerArray, self.cam_frustum_topic, qos1)
 
         self.create_subscription(Odometry, self.odom_topic, self.cb_odom, QOS_SENSOR)
         self.create_subscription(PointCloud2, self.pcl_topic, self.cb_pointcloud, QOS_SENSOR)
@@ -471,6 +469,30 @@ class InspectionPlannerNode(Node):
 
         self.pub_refPose.publish(refPose)
 
+    def visualizeFootprint(self, path: Path):
+
+        frustumMsg = MarkerArray()
+        counter = 0
+        for pose in path.poses:
+            # print(pose)
+            counter += 1
+            state = np.array([
+            pose.pose.position.x,
+            pose.pose.position.y,
+            pose.pose.position.z,
+            pose.pose.orientation.x,
+            pose.pose.orientation.y,
+            pose.pose.orientation.z,
+            pose.pose.orientation.w
+        ])
+            markerMsg = self.sensor.get_frustum(state,self.sensor_rot,self.sensor_trans,counter)
+            markerMsg.header.frame_id = "world"
+            markerMsg.header.stamp = self.get_clock().now().to_msg()
+
+            frustumMsg.markers.append(markerMsg)
+
+        self.pub_frustum.publish(frustumMsg)
+
     # -----------------
     # Timer tick
     # -----------------
@@ -495,6 +517,8 @@ class InspectionPlannerNode(Node):
                 tpred_path, tpred_path_array, predRefPose, commandPos, tcommand_yaw = self.viewPredPolicy()
                 self.vp_time = toc()
                 logger.debug(f"[View planning] Took: {self.vp_time:.3f} s")
+
+                self.visualizeFootprint(tpred_path)
 
                 self._last_pred_path = tpred_path
                 self._last_pred_refpose = predRefPose

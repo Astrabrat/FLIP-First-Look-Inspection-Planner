@@ -16,15 +16,11 @@
     - 69.4
     - 45.0
     aspect_ratio: 1.33
-    rotation:
-    - 0.0
-    - 0.0
-    - 0.0
     sensor_rotation:
     - 0.0
     - 0.0
     - -1.57
-    translation:
+    sensor_translation:
     - 0.0
     - 0.0
     - 0.0
@@ -38,7 +34,7 @@
     confidence_horizon: 5
     inspection_distance: 1.5
     photogrammetric_params:
-    - 0.8
+    - 0.5
     - 0.01
     prediction_horizon: 10
     FretD_confidence: 0.5
@@ -57,3 +53,4 @@
     predicted_path: inspection_planner/results/predicted_path
     maintained_distance: inspection_planner/results/maintained_distance
     cropped_points: inspection_planner/results/cropped_points
+    ccam_frustum: inspection_planner/general/camera_frustum
