@@ -13,13 +13,6 @@ def _strip_leading_slash(name: str) -> str:
 
 
 class PlannerCore:
-    """Non-ROS planning core.
-
-    ROS 1 version pulled parameters from the global parameter server via rospy.
-    In ROS 2, parameters are node-scoped. To keep code changes minimal and
-    preserve runtime behavior, the node passes itself in and we read parameters
-    from it using a ROS1-compatible key style (leading '/' accepted).
-    """
 
     def __init__(self, config: dict, node=None):
         self.cwd = os.getcwd()
@@ -28,12 +21,7 @@ class PlannerCore:
         logger.info('Planner Core Initialized')
 
     def _get_param(self, name: str, default):
-        """
-        ROS2-safe param getter with ROS1-style key tolerance.
-        - Accepts '/foo' or 'foo'
-        - Declares parameter if not declared
-        - Returns default if missing/unset
-        """
+
         key = name[1:] if isinstance(name, str) and name.startswith("/") else name
 
         # Declare if needed (ROS2 requires declare before get, unless allow_undeclared)
@@ -56,16 +44,7 @@ class PlannerCore:
 
     def initializeMissionParameters(self,config: dict):
 
-        # self.prediction_horizon = config["prediction_horizon"]
-        # self.confidence_horizon = config["confidence_horizon"]
-        # self.min_points_confidence = config["min_pts_conf"]
-        # self.desired_viewing_distance = config["inspection_distance"]
-        # self.fov = config["fov"]
-        # self.photogrammetric_params = config["photogrammetric_params"]
-        # self.interp_alpha = config["interpolation_alpha"]
-        # self.insp_height = config["inspection_height"]
-
-        # ---- REQUIRED PARAMS (do not skip anything from your list) ----
+        # ---- REQUIRED PARAMS ----
         self.desired_viewing_distance = float(config["inspection_distance"])
 
         self.photogrammetric_params = [float(x) for x in config["photogrammetric_params"]]
@@ -94,26 +73,6 @@ class PlannerCore:
         self.insp_height = float(config["inspection_height"])
 
         self.config = config
-
-        # --------------------------------------------------------------
-        # self.desired_viewing_distance = self._get_param('/inspection_distance', 2.0)
-        # self.photogrammetric_params = self._get_param('/photogrammetric_params', [0.6, 0.8])
-        # self.fov = self._get_param('/fov', [69.4, 45])
-        # self.platform_modality = self._get_param('/platform_modality', 0)
-        # self.min_pos_upd = self._get_param('/cmd_pos_upd', 0.2)
-        # self.min_yaw_upd = self._get_param('/cmd_yaw_upd', 0.05)
-        # self.sensor_rot = self._get_param('/sensor_rotation', [0.0, 0.0, 0.0])
-        # self.prediction_horizon = self._get_param('/prediction_horizon', 5)
-        # self.prediction_horizon = self._get_param('')
-        # logger.info(f"pred_horz {self.prediction_horizon}")
-        # self.confidence_horizon = self._get_param('/confidence_horizon', 5)
-        # self.min_points_confidence = self._get_param('/min_pts_conf', 10)
-        # self.interp_alpha = self._get_param('/interpolation_alpha', 0.5)
-        # self.world_frame = self._get_param('/world_frame', 'world')
-        # self.baseLink_frame = self._get_param('/base_link_frame', 'base_link')
-        # self.max_std_deviation = self._get_param('/max_std_deviation', 0.05)
-        # self.run_mode = self._get_param('/run_mode', 0)
-        # self.insp_height = self._get_param('/inspection_height', 1.0)
 
         self.start_flag = False
         self.execute_plan = False
@@ -184,14 +143,7 @@ class PlannerCore:
 
         dY = np.cross(self.viewUPvec, dX, axis=0)
         dZ = np.cross(dX, dY, axis=0)
-
-        # The rest of the original PlannerCore implementation remains unchanged.
-        # (Copied verbatim below)
-
-        # --- BEGIN original content ---
-        # Compute distance difference
-        # Keep desired distance live-updated (ROS 1 polled param server here).
-        # In ROS 2 we read the node parameter if available.
+        
         self.desired_viewing_distance = float(self.config["inspection_distance"])
         diff_view_dist = dist - self.desired_viewing_distance
 
@@ -260,7 +212,7 @@ class PlannerCore:
         for k in range(self.prediction_horizon):
             
             command_pos, command_yaw = self.generateViewPose(pred_pos, "inspect", lidar_points,predPose,pcl_pub_handle)
-            # command_yaw = command_yaw - self.sensor_rot[2]
+
             [cqx, cqy, cqz, cqw] = PlannerUtils.eul2quat(0, 0, command_yaw)
 
             # logger.debug(f"commadn_yaw{command_yaw}")
@@ -334,18 +286,6 @@ class PlannerCore:
         return (angle + np.pi) % (2 * np.pi) - np.pi
 
     def interpolateYaw(self,current_yaw, target_yaw, alpha=0.5):
-
-        """
-        Interpolates between current_yaw and target_yaw.
-        
-        Parameters:
-            current_yaw (float): Current yaw angle in degrees.
-            target_yaw (float): Target yaw angle in degrees.
-            alpha (float): Interpolation factor between 0 and 1.
-        
-        Returns:
-            float: Interpolated yaw angle.
-        """
 
         # Normalize angles to be in the range [-180, 180]
         current_yaw = self.normalizeAngle(current_yaw)

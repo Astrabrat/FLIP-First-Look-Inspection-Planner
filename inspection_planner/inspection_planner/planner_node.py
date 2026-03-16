@@ -64,7 +64,7 @@ class InspectionPlannerNode(Node):
     # -----------------
     def _make_or_update_timer(self):
         """Create (or recreate) the tick timer based on current rate_controller."""
-        rate = float(self.get_param('/rate_controller', 5))
+        rate = float(self.get_param('/rate_controller', 5.0))
 
         # Clamp to a safe range
         if rate <= 0.0:
@@ -106,12 +106,7 @@ class InspectionPlannerNode(Node):
         return result
     
     def get_param(self, name: str, default):
-        """
-        ROS2-safe param getter with ROS1-style key tolerance.
-        - Accepts '/foo' or 'foo'
-        - Declares parameter if not declared
-        - Returns default if missing/unset
-        """
+
         key = name[1:] if isinstance(name, str) and name.startswith("/") else name
 
         # Declare if needed (ROS2 requires declare before get, unless allow_undeclared)
@@ -168,15 +163,6 @@ class InspectionPlannerNode(Node):
         logger.info('All params declared')
 
     def initializeMissionParameters(self):
-
-        # self.desired_viewing_distance = self.get_param('/inspection_distance', 2.0)
-        # self.platform_modality = self.get_param('/platform_modality', 0)
-        # self.min_pos_upd = self.get_param('/cmd_pos_upd', 0.2)
-        # self.min_yaw_upd = self.get_param('/cmd_yaw_upd', 0.05)
-        # self.world_frame = self.get_param('/world_frame', 'world')
-        # self.run_mode = self.get_param('/run_mode', 1)
-        # self.sensor_rot = self.get_param('/sensor_rotation', [0.0, 0.0, 0.0])
-        # self.rate_controller = self.get_param('/rate_controller', 1)
 
         ## Store params to feed PlannerCore
 
@@ -457,7 +443,7 @@ class InspectionPlannerNode(Node):
             refPose.pose.orientation.w,
         )
 
-        modified_yaw = current_yaw - yaw_offset
+        modified_yaw = current_yaw + yaw_offset
         modified_yaw = self.planner.normalizeAngle(modified_yaw)
 
         [mqx, mqy, mqz, mqw] = PlannerUtils.eul2quat(0, 0, modified_yaw)
@@ -467,7 +453,7 @@ class InspectionPlannerNode(Node):
         refPose.pose.orientation.z = mqz
         refPose.pose.orientation.w = mqw
 
-        self.pub_refPose.publish(refPose)
+        return refPose
 
     def visualizeFootprint(self, path: Path):
 
@@ -475,7 +461,7 @@ class InspectionPlannerNode(Node):
         counter = 0
         for pose in path.poses:
             # print(pose)
-            counter += 1
+            
             state = np.array([
             pose.pose.position.x,
             pose.pose.position.y,
@@ -490,6 +476,7 @@ class InspectionPlannerNode(Node):
             markerMsg.header.stamp = self.get_clock().now().to_msg()
 
             frustumMsg.markers.append(markerMsg)
+            counter += 1
 
         self.pub_frustum.publish(frustumMsg)
 
@@ -517,7 +504,10 @@ class InspectionPlannerNode(Node):
                 tpred_path, tpred_path_array, predRefPose, commandPos, tcommand_yaw = self.viewPredPolicy()
                 self.vp_time = toc()
                 logger.debug(f"[View planning] Took: {self.vp_time:.3f} s")
-
+                
+                odomMsg = PlannerUtils.PoseArraytoPoseMsg(self.odom_pose.copy())
+                refPose = self.modifyReferenceYaw(odomMsg, self.sensor_rot[2])
+                tpred_path.poses.insert(0,refPose)
                 self.visualizeFootprint(tpred_path)
 
                 self._last_pred_path = tpred_path
@@ -544,7 +534,8 @@ class InspectionPlannerNode(Node):
 
         if self._last_pred_refpose is not None:
             if self.sensor_rot[2] != 0:
-                self.modifyReferenceYaw(self._last_pred_refpose, self.sensor_rot[2])
+                refPose = self.modifyReferenceYaw(self._last_pred_refpose, self.sensor_rot[2])
+                self.pub_refPose.publish(refPose)
             else:
                 self.pub_refPose.publish(self._last_pred_refpose)
 
@@ -562,7 +553,8 @@ class InspectionPlannerNode(Node):
                     self.pub_predPath.publish(self._last_pred_path)
 
                     if self.sensor_rot[2] != 0:
-                        self.modifyReferenceYaw(self._last_pred_refpose, self.sensor_rot[2])
+                        refPose = self.modifyReferenceYaw(self._last_pred_refpose, self.sensor_rot[2])
+                        self.pub_refPose.publish(refPose)
                     else:
                         self.pub_refPose.publish(self._last_pred_refpose)
                 except Exception as e:

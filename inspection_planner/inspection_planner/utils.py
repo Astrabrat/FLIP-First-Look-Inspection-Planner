@@ -226,12 +226,12 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
             center = np.array([0.0, 0.0, 0.0])
 
             # horizontal FOV is fov[0] degrees => compute width at far plane
-            wfar = 2.0 * np.tan(np.deg2rad(fov[0]) / 2.0) * sensor_range[1]
+            wfar = 2.0 * np.tan(np.deg2rad(fov[0]) / 2.0) * sensor_range
             # height from aspect ratio width/height
             hfar = wfar / ar
 
             # far plane center (in sensor frame, forward axis)
-            farCenter = center + forward * sensor_range[1]
+            farCenter = center + forward * sensor_range
 
             # compute corners on far plane (sensor coordinates)
             epTL = farCenter + right * (wfar / 2.0) + up * (hfar / 2.0)
@@ -285,10 +285,19 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
             m.action = Marker.ADD
             m.scale.x = 0.02  # line width in meters
             m.color = ColorRGBA()
-            m.color.r = 0.0
-            m.color.g = 1.0
-            m.color.b = 0.0
-            m.color.a = 1.0
+
+            if counter == 0:
+                m.scale.x = 0.05
+                m.color.r = 0.91
+                m.color.g = 0.12
+                m.color.b = 0.31
+                m.color.a = 1.0
+            else:
+                m.color.r = 0.0
+                m.color.g = 1.0
+                m.color.b = 0.0
+                m.color.a = 1.0
+            
 
             # ensure corners are numpy arrays
             corners = [np.asarray(c) for c in frustum_corners]  # TL, TR, BR, BL

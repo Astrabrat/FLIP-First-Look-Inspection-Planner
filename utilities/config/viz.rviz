@@ -24,6 +24,7 @@ Panels:
         - /RGB Image1/Topic1
         - /MarkerArray1
         - /MarkerArray1/Status1
+        - /MarkerArray1/Topic1
         - /MarkerArray1/Namespaces1
       Splitter Ratio: 0.5
     Tree Height: 1079
@@ -154,9 +155,9 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 43
+      Max Intensity: 53
       Min Color: 0; 0; 0
-      Min Intensity: 1
+      Min Intensity: 0
       Name: PointCloud2
       Position Transformer: XYZ
       Selectable: true
@@ -204,8 +205,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 7.338068962097168
-        Min Value: 2.336204767227173
+        Max Value: 7.433681488037109
+        Min Value: 3.179218292236328
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -284,9 +285,9 @@ Visualization Manager:
         camera_frustum: true
       Topic:
         Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
+        Durability Policy: System Default
+        History Policy: System Default
+        Reliability Policy: System Default
         Value: /husky/inspection_planner/general/camera_frustum
       Value: true
   Enabled: true
@@ -335,25 +336,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 15.945021629333496
+      Distance: 75.31390380859375
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 3.689105987548828
-        Y: 0.971477746963501
-        Z: -0.004066697787493467
+        X: 0
+        Y: 0
+        Z: 0
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7997969388961792
+      Pitch: 1.5647963285446167
       Target Frame: husky/base_link
       Value: Orbit (rviz_default_plugins)
-      Yaw: 1.2862170934677124
+      Yaw: 0.09722095727920532
     Saved: ~
 Window Geometry:
   Displays:
