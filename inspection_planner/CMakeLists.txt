@@ -41,8 +41,6 @@ target_link_libraries(pcl_transformer ${PCL_LIBRARIES})
 # Python package
 ament_python_install_package(${PROJECT_NAME})
 
-# Install python node as an executable via console_scripts (preferred)
-# but also install the file for backwards-compatibility.
 install(PROGRAMS
   inspection_planner/planner_node.py
   DESTINATION lib/${PROJECT_NAME}

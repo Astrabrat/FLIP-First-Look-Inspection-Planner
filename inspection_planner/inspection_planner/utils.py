@@ -1,4 +1,3 @@
-#! usr/bin/env python3 
 
 from inspection_planner.header import *
 from dataclasses import dataclass
@@ -1187,7 +1186,7 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
         num_points = len(routine)
         return sum([distMat[routine[i % num_points], routine[(i + 1) % num_points]] for i in range(num_points)])
     
-    def getDistanceMatrix(data, metric='euclidean'):
+    def getDistanceMatrix(data, metric='euclidean',weighted_height=False):
         """
         Calculates the distance matrix for a given data matrix.
 
@@ -1204,7 +1203,15 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
         for i in range(n):
             for j in range(i, n):
                 if metric == 'euclidean':
-                    distance = np.linalg.norm(data[i] - data[j])
+                    if not weighted_height:
+                        distance = np.linalg.norm(data[i] - data[j])
+                    else:
+                        pos1 = data[i]
+                        pos2 = data[j]
+                        exp_weight = 1/(np.exp(1/(abs(pos1[2]-pos2[2]))))
+
+                        distance = np.linalg.norm(data[i] - data[j]) + 10*(exp_weight)
+                        print(">>>DIST",distance)
                 elif metric == 'manhattan':
                     distance = np.sum(np.abs(data[i] - data[j]))
                 else:
@@ -1216,6 +1223,14 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
         return dist_matrix
 
     def rms(a, b):
+        a = np.asarray(a)
+        b = np.asarray(b)
+
+        # If the inputs are 1D vectors, compute RMS distance directly
+        if a.ndim == 1:
+            return np.sqrt(np.mean((a - b)**2))
+
+        # If the inputs are arrays of vectors, compute rowwise
         return np.sqrt(np.mean(np.sum((a - b)**2, axis=1)))
 
     def getPointMsg(x, y, z):
@@ -1566,7 +1581,36 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
                 normal = -normal
                 
             return normal
+        def polygon_area_3d(self,points):
+            """
+            Compute the area of a 3D polygon using cross products.
+            points: list of (x, y, z) vertices ordered around the polygon.
+            """
+            cross_sum = [0.0, 0.0, 0.0]
+            n = len(points)
 
+            for i in range(n):
+                x1, y1, z1 = points[i]
+                x2, y2, z2 = points[(i + 1) % n]
+
+                # Cross product: P_i × P_(i+1)
+                cross = (
+                    y1 * z2 - z1 * y2,
+                    z1 * x2 - x1 * z2,
+                    x1 * y2 - y1 * x2
+                )
+
+                # Sum component-wise
+                cross_sum[0] += cross[0]
+                cross_sum[1] += cross[1]
+                cross_sum[2] += cross[2]
+
+            # area = 0.5 * magnitude of cross_sum
+            return 0.5 * math.sqrt(
+                cross_sum[0]**2 +
+                cross_sum[1]**2 +
+                cross_sum[2]**2
+            )
         def is_behind_plane(self, point, plane_centroid, plane_normal):
             """Check if point is behind the plane (opposite side of normal)"""
             vec_to_point = point - plane_centroid
@@ -1781,6 +1825,8 @@ class PlannerUtils(GradientColorGenerator,DTWGradientColorGenerator,SensorModel)
                 for pt in msg.polygon.points:
                     roi_points.append([pt.x, pt.y, pt.z])
                 
+                area = self.polygon_area_3d(roi_points)
+                InspPlan.roi_areas.append(area)                
                 ## Verify if the polygon is in the proper orienttation CCW
                 
                 # polygon = shapely.geometry.Polygon(roi_points)
