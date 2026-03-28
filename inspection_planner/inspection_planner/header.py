@@ -61,6 +61,9 @@ from inspection_msgs.msg import *  # noqa: F403
 from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy, HistoryPolicy
 from rclpy.qos import qos_profile_sensor_data
 
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rcl_interfaces.msg import SetParametersResult
+
 # For sensor subscriptions (PointCloud2, Image, LaserScan, etc.)
 # Sensors
 QOS_SENSOR = qos_profile_sensor_data

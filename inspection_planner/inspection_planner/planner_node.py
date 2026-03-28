@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 
-from inspection_planner.header import *
+from header import *
 
-# from header import *  # noqa: F401,F403
-
-from rclpy.node import Node
-from rclpy.qos import QoSProfile
+# from rclpy.node import Node
+# from rclpy.qos import QoSProfile
 
 from inspection_planner.planner_core import PlannerCore
 from inspection_planner.utils import PlannerUtils
-
-from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
-from rcl_interfaces.msg import SetParametersResult
 
 
 logger.add("inspection_node_loguru.log")
@@ -132,11 +127,8 @@ class InspectionPlannerNode(Node):
         self.declare_parameter('cmd_yaw_upd', 0.05)
         self.declare_parameter('prediction_horizon', 5)
         self.declare_parameter('confidence_horizon', 5)
-        self.declare_parameter('min_pts_conf', 10)
-        self.declare_parameter('interpolation_alpha', 0.5)
         self.declare_parameter('world_frame', 'world')
         self.declare_parameter('base_link_frame', 'base_link')
-        self.declare_parameter('max_std_deviation', 0.05)
         self.declare_parameter('run_mode', 0)
         self.declare_parameter('inspection_height', 1.0)
         self.declare_parameter('rate_controller', 1.0)
@@ -191,14 +183,10 @@ class InspectionPlannerNode(Node):
 
             "prediction_horizon": max(1, int(self.get_parameter('prediction_horizon').value)),
             "confidence_horizon": max(1, int(self.get_parameter('confidence_horizon').value)),
-            "min_pts_conf": int(self.get_parameter('min_pts_conf').value),
-
-            "interpolation_alpha": float(self.get_parameter('interpolation_alpha').value),
 
             "world_frame": str(self.get_parameter('world_frame').value),
             "base_link_frame": str(self.get_parameter('base_link_frame').value),
 
-            "max_std_deviation": float(self.get_parameter('max_std_deviation').value),
             "run_mode": int(self.get_parameter('run_mode').value),
             "inspection_height": float(self.get_parameter('inspection_height').value),
         }
@@ -215,7 +203,6 @@ class InspectionPlannerNode(Node):
         self.inspection_height = self.params["inspection_height"]
         self.rate_controller = int(self.get_parameter('rate_controller').value) if self.has_parameter('rate_controller') else 5
 
-        logger.info(f"prediction_horizon: {self.params['prediction_horizon']}")
         logger.info("Successfully loaded parameters")
 
         
@@ -256,8 +243,6 @@ class InspectionPlannerNode(Node):
         # Keep run_mode consistent (already declared in mission params)
         self.run_mode = int(self.get_parameter('run_mode').value)
 
-        logger.info("Successfully loaded topics")
-
         qos1 = QoSProfile(depth=1)
 
         self.pub_vieweingDistance = self.create_publisher(Float64, self.inspDist_topic, qos1)
@@ -276,10 +261,6 @@ class InspectionPlannerNode(Node):
         # Start service
         self.create_service(Trigger, 'initialize_inspection', self.cb_start)
 
-        # Client (CBF) - kept for parity; not currently used in logic.
-        self.cbfPolicy = self.create_client(Trigger, 'cbf_input')
-
-        # ROS 1 code blocked until first messages arrived; emulate that here.
         self._wait_for_initial_messages(timeout_sec=5.0)
 
         logger.info("Successfully loaded topics")
@@ -560,7 +541,6 @@ class InspectionPlannerNode(Node):
                 except Exception as e:
                     logger.warning(f"updateYaw failed: {e}")
             else:
-                # Inner loop in ROS 1 finished -> allow replanning next tick.
                 self._have_pred = False
         else:
             self._have_pred = False

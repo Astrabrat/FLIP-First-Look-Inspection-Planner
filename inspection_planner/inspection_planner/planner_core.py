@@ -62,13 +62,10 @@ class PlannerCore:
 
         self.confidence_horizon = max(1, int(config["confidence_horizon"]))
 
-        self.min_points_confidence = int(config["min_pts_conf"])
-        self.interp_alpha = float(config["interpolation_alpha"])
 
         self.world_frame = str(config["world_frame"])
         self.baseLink_frame = str(config["base_link_frame"])
 
-        self.max_std_deviation = float(config["max_std_deviation"])
         self.run_mode = int(config["run_mode"])
         self.insp_height = float(config["inspection_height"])
 
