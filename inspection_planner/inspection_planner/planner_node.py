@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-from header import *
-
-# from rclpy.node import Node
-# from rclpy.qos import QoSProfile
+from inspection_planner.header import *
 
 from inspection_planner.planner_core import PlannerCore
 from inspection_planner.utils import PlannerUtils

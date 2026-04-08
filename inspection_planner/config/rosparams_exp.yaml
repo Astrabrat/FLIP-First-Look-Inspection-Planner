@@ -28,7 +28,7 @@
     confidence_horizon: 5
     inspection_distance: 1.5
     photogrammetric_params:
-    - 0.8
+    - 0.7
     - 0.01
     prediction_horizon: 10
     inspection_height: 1.0

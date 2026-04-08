@@ -1,12 +1,6 @@
 
 from inspection_planner.header import *
-# from dataclasses import dataclass
-# import heapq
 
-# from itertools import count
-# from scipy.spatial.transform import Rotation as R
-# from scipy.spatial.transform import Slerp
-# from scipy.spatial import geometric_slerp
 
 @dataclass
 class Plane:
