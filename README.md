@@ -64,7 +64,9 @@ ros2 service call /husky/initialize_inspection std_srvs/srv/Trigger {}
 ```
 Else, run ```pip install tmuxinator``` and launch the stack with,
 
-```tmux start-server \; source-file src/FLIP-First-Look-Inspection-Planner/utilities/config/inspection.tmux.conf \; attach-session -t inspection```
+```bash
+tmux start-server \; source-file src/FLIP-First-Look-Inspection-Planner/utilities/config/inspection.tmux.conf \; attach-session -t inspection
+```
 
 ## Performance Monitoring
 
