@@ -24,6 +24,10 @@ Kindly cite the following paper if you find the codebase useful for your work.
 }
 ```
 
+## License
+
+MIT- modify it and adapt for your use-case :)
+
 ## Installation Instructions (Ubuntu 22.04 and ROS2 Humble)
 
 ```bash
@@ -58,6 +62,9 @@ ros2 service call /<robot_namespace>/initialize_inspection std_srvs/srv/Trigger 
 # Example
 ros2 service call /husky/initialize_inspection std_srvs/srv/Trigger {}
 ```
+Else, run ```pip install tmuxinator``` and launch the stack with,
+
+```tmux start-server \; source-file src/FLIP-First-Look-Inspection-Planner/utilities/config/inspection.tmux.conf \; attach-session -t inspection```
 
 ## Performance Monitoring
 
@@ -140,3 +147,9 @@ To configure topics and mission parameters, modify ```/inspection_planner/config
 > - Adjust the `sensor_rotation` parameters as needed (currently supported).
 > - `sensor_translation` parameters are defined but not yet supported.
 > - Configure the voxel grid filter by setting the subsampling resolutions for the **X**, **Y**, and **Z** axes.
+
+## TODO
+
+1. Remove wildcard imports for control and debugging
+2. Integrate *sensor_translation* effect properly into view-planning
+
