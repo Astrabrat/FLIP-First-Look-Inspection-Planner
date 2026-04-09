@@ -4,7 +4,7 @@
   <version>0.0.0</version>
   <description>Custom messages for inspection planner (converted to ROS 2)</description>
   <maintainer email="you@example.com">you</maintainer>
-  <license>Apache-2.0</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

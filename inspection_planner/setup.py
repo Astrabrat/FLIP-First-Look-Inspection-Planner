@@ -17,7 +17,7 @@ setup(
     maintainer='Vignesh Kottayam Viswanathan',
     maintainer_email='vigkotvis@gmail.com',
     description='inspection_planner (ROS 2 port)',
-    license='TODO',
+    license='MIT',
     entry_points={
         'console_scripts': [
             'planner_node = inspection_planner.planner_node:main',

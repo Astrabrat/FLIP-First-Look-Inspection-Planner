@@ -22,7 +22,7 @@
     - 0.0
     - 0.0
     - 0.0
-    rate_controller: 5.0
+    rate_controller: 1.0
     cmd_pos_upd: 25.0
     cmd_yaw_upd: 3.14
     confidence_horizon: 5
@@ -41,4 +41,5 @@
     predicted_path: inspection_planner/results/predicted_path
     maintained_distance: inspection_planner/results/maintained_distance
     cropped_points: inspection_planner/results/cropped_points
+    nn_point: inspection_planner/results/nn_point
     cam_frustum: inspection_planner/general/camera_frustum
