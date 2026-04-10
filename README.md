@@ -7,7 +7,7 @@
 
 This codebase contains the implementation of the First Look Inspection Planner developed as part of the research pursued in my doctoral thesis *On Adaptive and Scene-Aware Inspection Autonomy*. 
 
-The codebase has been tested on Quadrupedal robots (SPOT), Ground robots (Husky) and Aerial robots (Shafter). The method has been extensively validated across static and dynamic environment condition as well as in a priori known and unknown environments. The work has been validated using both 3D LiDAR and RGBD point-clouds as inputs. For better performance, use of LiDAR points is advised in combination with the voxel grid filter.
+The codebase has been tested on Quadrupedal robots (SPOT), Ground robots (Husky) and Aerial robots (Shafter). The method has been extensively validated across static and dynamic environment condition as well as in a priori known and unknown environments. The work has been validated using both 3D LiDAR and RGBD point-clouds as inputs. For better performance, use of LiDAR points is advised in combination with the voxel grid filter. The codebase was mostly evaluated in ROS 1 and has been ported to ROS 2.
 
 The method plans over instantaneous 3D point-cloud and odometry information with configurable orientation of the onboard sensor suite.
 
@@ -23,6 +23,9 @@ Kindly cite the following paper if you find the codebase useful for your work.
   url          = {https://urn.kb.se/resolve?urn=urn:nbn:se:ltu:diva-116469}
 }
 ```
+
+## Ackowledgements
+This work was made possible in collaboration with the amazing team at Robotics and Artificial subject at Lulea University of Technology. Visit [www.fieldrobotics.eu](www.fieldrobotics.eu) for more information.
 
 ## License
 
