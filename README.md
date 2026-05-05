@@ -52,11 +52,13 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 ## Deployment Instructions
 
-Run```ros2 launch inspection_planner planner.launch.py``` to start the inspection planner
+Run```ros2 launch inspection_planner planner.launch.py team:=kReal robot:=husky``` to start the inspection planner
 
 **Open another terminal, source the inspection_ws and enter the following**
 
-Run ```ros2 launch inspection_planner voxel_grid_simple.launch.py``` to launch the voxel grid filter
+Run ```ros2 launch inspection_planner voxel_grid_simple.launch.py team:=kReal robot:=husky``` to launch the voxel grid filter
+
+The input params **robot** and **team** define the robot namespace and type of deployements, e.g. simulation or real robots. This launches the appropriate config files. Change it to suit your needs.
 
 **Check ODOM and PCL topics. Once ready to start planner, send the following service,**
 
@@ -152,9 +154,10 @@ To configure topics and mission parameters, modify ```/inspection_planner/config
 > - Adjust the `sensor_rotation` parameters as needed (currently supported).
 > - `sensor_translation` parameters are defined but not yet supported.
 > - Configure the voxel grid filter by setting the subsampling resolutions for the **X**, **Y**, and **Z** axes.
+> - There are some open parameters (defined but not used) for future  proper improvements.
 
 ## TODO
 
 1. Remove wildcard imports for control and debugging
 2. Integrate *sensor_translation* effect properly into view-planning
-
+3. Address open parameters
