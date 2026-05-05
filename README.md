@@ -1,7 +1,6 @@
 <div align="center">
     <h1>A Reactive View Planner For Mobile Robots</h1>
-    <a href="https://youtu.be/N30BSQN9L4E"><img src="https://img.shields.io/badge/YouTube-ff0000?         
-     logo=youtube" /></a>
+    <a href="https://youtu.be/N30BSQN9L4E"><img src="https://img.shields.io/badge/YouTube-ff0000?logo=youtube" /></a>
     <a href="#"><img src="https://img.shields.io/badge/C++-00599C?logo=cplusplus" /></a>
        <a href="#"><img src="https://img.shields.io/badge/Python-FFD43B?logo=python&logoColor=306998" /></a>  
     <a href="#"><img src="https://img.shields.io/badge/ROS2-Humble-22314E?logo=ros" /></a>
