@@ -3,7 +3,7 @@
   <name>inspection_msgs</name>
   <version>0.0.0</version>
   <description>Custom messages for inspection planner (converted to ROS 2)</description>
-  <maintainer email="you@example.com">you</maintainer>
+  <maintainer email="vigkotvis@gmail.com">Vignesh Kottayam Viswanathan</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
