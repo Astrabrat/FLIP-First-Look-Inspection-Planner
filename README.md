@@ -39,7 +39,7 @@ This work was made possible in collaboration with the amazing team at Robotics a
 
 ## License
 
-MIT- modify it and adapt for your use-case :)
+MIT- modify it and adapt for your use-case.
 
 ## Installation Instructions (Ubuntu 22.04 and ROS2 Humble)
 
