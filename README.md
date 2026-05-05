@@ -1,11 +1,19 @@
-# FLIP-First-Look-Inspection-Planner
+<div align="center">
+    <h1>A Reactive View Planner For Mobile Robots</h1>
+    <a href="#"><img src="https://img.shields.io/badge/C++-00599C?logo=cplusplus" /></a>
+       <a href="#"><img src="https://img.shields.io/badge/Python-FFD43B?logo=python&logoColor=306998" /></a>  
+    <a href="#"><img src="https://img.shields.io/badge/ROS2-Humble-22314E?logo=ros" /></a>
+     <a href="#"><img src="https://img.shields.io/badge/Ubuntu-22.04-E95420?logo=ubuntu" /></a>
+    <br />
+    <br />
+    <p><strong><em></em></strong></p>
+</div>
+
 ![alt text](assets/image_1.webp)
 ![alt text](assets/image_2.webp)
 ![alt text](assets/image_3.webp)
 
-**A Reactive View Planner For Mobile Robots**
-
-This codebase contains the implementation of the First Look Inspection Planner developed as part of the research pursued in my doctoral thesis *On Adaptive and Scene-Aware Inspection Autonomy*. 
+This codebase contains the core implementation of the First Look Inspection Planner developed as part of the research pursued in my doctoral thesis *On Adaptive and Scene-Aware Inspection Autonomy*.
 
 The codebase has been tested on Quadrupedal robots (SPOT), Ground robots (Husky) and Aerial robots (Shafter). The method has been extensively validated across static and dynamic environment condition as well as in a priori known and unknown environments. The work has been validated using both 3D LiDAR and RGBD point-clouds as inputs. For better performance, use of LiDAR points is advised in combination with the voxel grid filter. The codebase was mostly evaluated in ROS 1 and has been ported to ROS 2.
 
@@ -52,7 +60,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 ## Deployment Instructions
 
-Run```ros2 launch inspection_planner planner.launch.py team:=kReal robot:=husky``` to start the inspection planner
+Run ```ros2 launch inspection_planner planner.launch.py team:=kReal robot:=husky``` to start the inspection planner
 
 **Open another terminal, source the inspection_ws and enter the following**
 
